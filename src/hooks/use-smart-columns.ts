@@ -45,11 +45,23 @@ export function usePreviewSmartColumn() {
   });
 }
 
+// Jobs list queries are keyed ["jobs", workspaceId, datasetId] with either
+// segment possibly omitted — invalidate by prefix so every open Jobs view
+// (nav badge, drawer, scoped-to-dataset or not) picks up the new job and,
+// since useJobs() only polls while a job is active, actually starts polling
+// again instead of staying frozen on its last (all-settled) snapshot.
+function invalidateJobs(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["jobs"] });
+}
+
 export function useGenerateSmartColumn(datasetId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (smartColumnId: string) => apiPost<{ job: JobDto }>(`/api/smart-columns/${smartColumnId}/generate`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["workbench", datasetId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["workbench", datasetId] });
+      invalidateJobs(qc);
+    },
   });
 }
 
@@ -57,7 +69,10 @@ export function useRetrySmartColumn(datasetId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (smartColumnId: string) => apiPost<{ job: JobDto }>(`/api/smart-columns/${smartColumnId}/retry`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["workbench", datasetId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["workbench", datasetId] });
+      invalidateJobs(qc);
+    },
   });
 }
 

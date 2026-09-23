@@ -36,7 +36,7 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
 
   const result = await decisionModel.categoricalDecision(
-    body.question,
+    { question: body.question },
     "Which of these existing analysis columns, if any, can answer this question about the dataset? Choose the new-column option if none apply.",
     labels,
   );

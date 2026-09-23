@@ -45,9 +45,15 @@ export interface FailedDecisionResult {
 
 export type DecisionResult = SuccessDecisionResult | FailedDecisionResult;
 
+/** Named source-column fields, sent to the provider as structured state
+ * rather than a flattened block of text — per TypeSafe's own guidance,
+ * named JSON fields let the model tell columns apart instead of having to
+ * re-infer structure from prose (e.g. "Title" vs. "Article Text"). */
+export type DecisionInput = Record<string, string>;
+
 export interface DecisionModel {
   /** A 2-option Choice: `yes` vs `no`, preserving the full distribution. */
-  binaryDecision(input: string, question: string, labels: BinaryLabels, instructions?: string): Promise<DecisionResult>;
-  categoricalDecision(input: string, question: string, labels: CategoricalLabels, instructions?: string): Promise<DecisionResult>;
-  ordinalDecision(input: string, question: string, scale: RatingLabels, instructions?: string): Promise<DecisionResult>;
+  binaryDecision(input: DecisionInput, question: string, labels: BinaryLabels, instructions?: string): Promise<DecisionResult>;
+  categoricalDecision(input: DecisionInput, question: string, labels: CategoricalLabels, instructions?: string): Promise<DecisionResult>;
+  ordinalDecision(input: DecisionInput, question: string, scale: RatingLabels, instructions?: string): Promise<DecisionResult>;
 }

@@ -15,7 +15,7 @@ export interface RunOneParams {
  * row — used by both the synchronous Preview endpoint and the background
  * generation worker, so the two can never drift apart. */
 export async function runSmartColumnOnRow(params: RunOneParams): Promise<DecisionResult> {
-  const { text, isEmpty } = buildSourceState(params.row, params.sourceColumns);
+  const { fields, isEmpty } = buildSourceState(params.row, params.sourceColumns);
   if (isEmpty) {
     return {
       status: "not_processed",
@@ -27,11 +27,11 @@ export async function runSmartColumnOnRow(params: RunOneParams): Promise<Decisio
   const instructions = params.instructions ?? undefined;
   switch (params.type) {
     case SmartColumnType.BINARY:
-      return decisionModel.binaryDecision(text, params.question, params.labels as BinaryLabels, instructions);
+      return decisionModel.binaryDecision(fields, params.question, params.labels as BinaryLabels, instructions);
     case SmartColumnType.CATEGORICAL:
-      return decisionModel.categoricalDecision(text, params.question, params.labels as CategoricalLabels, instructions);
+      return decisionModel.categoricalDecision(fields, params.question, params.labels as CategoricalLabels, instructions);
     case SmartColumnType.RATING:
-      return decisionModel.ordinalDecision(text, params.question, params.labels as RatingLabels, instructions);
+      return decisionModel.ordinalDecision(fields, params.question, params.labels as RatingLabels, instructions);
     default:
       throw new Error(`Unhandled Smart Column type: ${params.type as string}`);
   }

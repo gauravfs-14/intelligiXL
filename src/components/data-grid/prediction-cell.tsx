@@ -6,17 +6,8 @@ import { AlertTriangle, Clock, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ConfidencePill, ProbabilityBreakdown } from "@/components/ui/confidence";
 import { Badge } from "@/components/ui/badge";
+import { PREDICTION_ERROR_LABEL as ERROR_LABEL } from "@/lib/prediction-error-labels";
 import type { PredictionDto } from "@/types/workbench";
-
-const ERROR_LABEL: Record<string, string> = {
-  EMPTY_SOURCE: "No source text",
-  TIMEOUT: "Timed out",
-  RATE_LIMITED: "Rate limited",
-  PROVIDER_UNAVAILABLE: "Provider unavailable",
-  INVALID_RESPONSE: "Invalid response",
-  AUTH_FAILURE: "API key invalid",
-  UNKNOWN: "Failed",
-};
 
 /** A single Smart Column cell (FR-020) — click to reveal the full
  * probability distribution and model provenance (FR-021). */

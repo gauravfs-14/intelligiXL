@@ -1,4 +1,4 @@
-import type { JobStatus, JobType } from "@/generated/prisma/browser";
+import type { JobStatus, JobType, PredictionErrorReason, SmartColumnType } from "@/generated/prisma/browser";
 
 export interface WorkspaceDto {
   id: string;
@@ -23,6 +23,25 @@ export interface JobDto {
   smartColumnVersionId: string | null;
   createdAt: string;
   finishedAt: string | null;
+  smartColumn?: { id: string; name: string; type: SmartColumnType } | null;
+  dataset?: { id: string; filename: string } | null;
+}
+
+export interface JobFailureDto {
+  id: string;
+  datasetRowId: string;
+  rowIndex: number;
+  errorReason: PredictionErrorReason | null;
+  updatedAt: string;
+  sourceSnippet: string;
+}
+
+export interface JobFailuresResponse {
+  job: JobDto;
+  smartColumnName: string | null;
+  totalFailures: number;
+  truncated: boolean;
+  failures: JobFailureDto[];
 }
 
 export interface TemplateDto {

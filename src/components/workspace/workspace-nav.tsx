@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, BarChart3, ListChecks, LayoutTemplate, FolderKanban, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DatasetSwitcher } from "./dataset-switcher";
+import { JobsNavButton } from "@/components/jobs/jobs-nav-button";
 
 const SECTIONS = [
   { key: "data", label: "Data", icon: LayoutGrid },
@@ -50,7 +51,8 @@ export function WorkspaceNav({ workspaceId, workspaceName }: { workspaceId: stri
           })}
         </nav>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <JobsNavButton workspaceId={workspaceId} />
           <DatasetSwitcher workspaceId={workspaceId} />
         </div>
       </div>

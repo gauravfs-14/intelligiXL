@@ -219,6 +219,11 @@ model Prediction {
   datasetRow           DatasetRow             @relation(fields: [datasetRowId], references: [id], onDelete: Cascade)
   smartColumnVersionId String
   smartColumnVersion   SmartColumnVersion     @relation(fields: [smartColumnVersionId], references: [id], onDelete: Cascade)
+  // The job run that most recently wrote this row — lets the Jobs/Logs view
+  // attribute a failure to the exact run that produced it, even after a
+  // later run overwrites the same row.
+  jobId                String?
+  job                  Job?                   @relation(fields: [jobId], references: [id], onDelete: SetNull)
   status               PredictionStatus       @default(PENDING)
   errorReason          PredictionErrorReason?
   predictedLabel       String?
@@ -239,6 +244,7 @@ model Prediction {
   @@index([smartColumnVersionId, status])
   @@index([smartColumnVersionId, confidence])
   @@index([smartColumnVersionId, predictedLabel])
+  @@index([jobId, status])
 }
 
 // The AI prediction above is never overwritten by a human correction — the
@@ -275,6 +281,8 @@ model Job {
   errorLog             Json?
   createdAt            DateTime  @default(now())
   finishedAt           DateTime?
+
+  predictions Prediction[]
 
   @@index([workspaceId])
   @@index([smartColumnVersionId])

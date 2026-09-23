@@ -77,8 +77,8 @@ export async function runGenerationJob(jobId: string): Promise<void> {
 
     await prisma.prediction.upsert({
       where: { datasetRowId_smartColumnVersionId: { datasetRowId: row.id, smartColumnVersionId: version.id } },
-      create: { datasetRowId: row.id, smartColumnVersionId: version.id, ...data },
-      update: data,
+      create: { datasetRowId: row.id, smartColumnVersionId: version.id, jobId, ...data },
+      update: { jobId, ...data },
     });
 
     if (data.status === PredictionStatus.FAILED) failed += 1;
