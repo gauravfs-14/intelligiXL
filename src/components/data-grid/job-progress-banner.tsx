@@ -55,9 +55,9 @@ export function JobProgressBanner({ jobId, name, datasetId, onDismiss }: { jobId
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="flex items-center gap-3 border-b border-border-strong bg-accent-muted px-4 py-2"
+      className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-2"
     >
-      {active ? <InlineSpinner className="text-accent" /> : job.status === "COMPLETED" ? null : <XCircle className="h-3.5 w-3.5 text-danger" />}
+      {active ? <InlineSpinner className="text-primary" /> : job.status === "COMPLETED" ? null : <XCircle className="h-3.5 w-3.5 text-danger" />}
       <span className="shrink-0 text-sm font-medium">{name}</span>
       <div className="max-w-xs flex-1">
         <ProgressBar value={job.completedItems} max={job.totalItems} />

@@ -98,7 +98,7 @@ export default function ReviewPage({ params }: PageProps<"/w/[workspaceId]/revie
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-3xl flex-col gap-4 overflow-y-auto p-6">
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Smart Column</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Smart Column</span>
           <Select value={smartColumnId ?? ""} onValueChange={setSmartColumnId}>
             <SelectTrigger className="w-56">
               <SelectValue />
@@ -113,7 +113,7 @@ export default function ReviewPage({ params }: PageProps<"/w/[workspaceId]/revie
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Status</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</span>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -128,7 +128,7 @@ export default function ReviewPage({ params }: PageProps<"/w/[workspaceId]/revie
           </Select>
         </div>
         <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Confidence &lt; {confidenceMax}%</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Confidence &lt; {confidenceMax}%</span>
           <Slider min={0} max={100} step={5} value={[confidenceMax]} onValueChange={([v]) => setConfidenceMax(v)} />
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function ReviewPage({ params }: PageProps<"/w/[workspaceId]/revie
                   )}
                 </div>
 
-                <div className="border border-border bg-background p-3 text-sm">
+                <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
                   {current?.activeVersion?.sourceColumns.map((col) => (
                     <p key={col} className="mb-1 last:mb-0">
                       <span className="font-semibold">{col}: </span>
@@ -175,7 +175,7 @@ export default function ReviewPage({ params }: PageProps<"/w/[workspaceId]/revie
 
                 {correctingValue !== null ? (
                   <div className="flex flex-col gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted">Correct to:</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Correct to:</span>
                     {current?.activeVersion && (
                       <ReviewValuePicker version={current.activeVersion} value={correctingValue || null} onChange={setCorrectingValue} />
                     )}

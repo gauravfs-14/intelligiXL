@@ -102,7 +102,7 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
         <TabsContent value="distribution" className="mt-4 flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted">Smart Column</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Smart Column</span>
               <Select value={focusId ?? ""} onValueChange={setFocusId}>
                 <SelectTrigger className="w-56">
                   <SelectValue />
@@ -117,7 +117,7 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
               </Select>
             </div>
             <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted">Confidence ≥ {minConfidence}%</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Confidence ≥ {minConfidence}%</span>
               <Slider min={0} max={100} step={5} value={[minConfidence]} onValueChange={([v]) => setMinConfidence(v)} />
             </div>
           </div>
@@ -166,8 +166,8 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
                     {distribution.map((d) => (
                       <div key={d.label} className="flex items-center gap-3 text-sm">
                         <span className="w-32 shrink-0 truncate">{d.label}</span>
-                        <div className="h-2 flex-1 border border-border bg-background">
-                          <div className="h-full bg-accent" style={{ width: `${d.percent * 100}%` }} />
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out" style={{ width: `${d.percent * 100}%` }} />
                         </div>
                         <span className="w-14 shrink-0 text-right font-mono text-xs text-muted-foreground">{formatPercent(d.percent)}</span>
                         <span className="w-20 shrink-0 text-right font-mono text-xs text-muted-foreground">avg {formatPercent(d.avgConfidence)}</span>
@@ -183,7 +183,7 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
         <TabsContent value="compare" className="mt-4 flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted">Column A</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column A</span>
               <Select value={compareA ?? ""} onValueChange={setCompareA}>
                 <SelectTrigger className="w-52">
                   <SelectValue />
@@ -197,9 +197,9 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
                 </SelectContent>
               </Select>
             </div>
-            <GitCompare className="mb-2 h-4 w-4 text-muted" />
+            <GitCompare className="mb-2 h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted">Column B</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column B</span>
               <Select value={compareB ?? ""} onValueChange={setCompareB}>
                 <SelectTrigger className="w-52">
                   <SelectValue />
@@ -231,9 +231,9 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
   return (
-    <div className="border border-border-strong bg-surface p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className={`mt-1 font-mono text-lg ${tone === "warning" ? "text-warning" : ""}`}>{value}</p>
+    <div className="rounded-lg border border-border bg-surface p-3 shadow-flat transition-shadow hover:shadow-flat-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`mt-1 font-mono text-lg tabular-nums ${tone === "warning" ? "text-warning" : ""}`}>{value}</p>
     </div>
   );
 }

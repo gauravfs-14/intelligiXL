@@ -14,9 +14,9 @@ export function ConfidencePill({ label, confidence }: { label: string; confidenc
   const tone = confidenceTone(confidence);
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 text-sm">
-      <span className={cn("h-1.5 w-1.5 shrink-0", toneBg[tone])} aria-hidden />
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", toneBg[tone])} aria-hidden />
       <span className="truncate">{label}</span>
-      <span className={cn("shrink-0 font-mono text-xs", toneText[tone])}>{formatPercent(confidence)}</span>
+      <span className={cn("shrink-0 font-mono text-xs tabular-nums", toneText[tone])}>{formatPercent(confidence)}</span>
     </span>
   );
 }
@@ -37,13 +37,13 @@ export function ProbabilityBreakdown({
           <span className={cn("w-28 shrink-0 truncate text-xs", label === predicted && "font-semibold text-foreground")}>
             {label}
           </span>
-          <div className="relative h-3 w-full grow border border-border bg-background">
+          <div className="relative h-2.5 w-full grow overflow-hidden rounded-full bg-muted">
             <div
-              className={cn("h-full", label === predicted ? "bg-accent" : "bg-muted-foreground/50")}
+              className={cn("h-full rounded-full transition-[width] duration-500 ease-out", label === predicted ? "bg-primary" : "bg-muted-foreground/40")}
               style={{ width: `${Math.max(0, Math.min(100, p * 100))}%` }}
             />
           </div>
-          <span className="w-12 shrink-0 text-right font-mono text-xs text-muted-foreground">{formatPercent(p, 1)}</span>
+          <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">{formatPercent(p, 1)}</span>
         </div>
       ))}
     </div>

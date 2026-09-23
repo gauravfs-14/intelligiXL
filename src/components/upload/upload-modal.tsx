@@ -77,7 +77,7 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
             <div
               className={cn(
                 "flex flex-col items-center justify-center gap-3 border-2 border-dashed px-6 py-16 text-center transition-colors",
-                dragActive ? "border-accent bg-accent-muted" : "border-border",
+                dragActive ? "border-primary bg-primary/10" : "border-border",
               )}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -120,8 +120,8 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
           </motion.div>
         ) : (
           <motion.div key="preview" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 border border-border-strong bg-background px-3 py-2">
-              <FileSpreadsheet className="h-4 w-4 text-accent" />
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">{preview.filename}</span>
               <span className="ml-auto text-xs text-muted-foreground">
                 {preview.rowCount.toLocaleString()} rows · {preview.columnCount} columns
@@ -136,10 +136,10 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
             )}
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Columns — uncheck any you don&apos;t want to use as Smart Column source text
               </p>
-              <div className="max-h-32 overflow-y-auto border border-border">
+              <div className="max-h-32 overflow-y-auto rounded-md border border-border">
                 {preview.columns.map((c) => (
                   <label key={c.name} className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-sm last:border-b-0">
                     <Checkbox
@@ -154,8 +154,8 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Sample</p>
-              <div className="max-h-52 overflow-auto border border-border">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sample</p>
+              <div className="max-h-52 overflow-auto rounded-md border border-border">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-surface">
                     <tr>

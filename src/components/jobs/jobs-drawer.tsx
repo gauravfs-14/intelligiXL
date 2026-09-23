@@ -38,7 +38,7 @@ export function JobsDrawer({
 
         {activeJobs.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Active</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Active</p>
             {activeJobs.map((job) => (
               <JobRow key={job.id} job={job} />
             ))}
@@ -47,7 +47,7 @@ export function JobsDrawer({
 
         {pastJobs.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">History</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">History</p>
             {pastJobs.map((job) => (
               <JobRow key={job.id} job={job} />
             ))}

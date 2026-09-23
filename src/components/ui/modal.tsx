@@ -28,7 +28,7 @@ export function Modal({ open, onOpenChange, title, description, children, size =
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild forceMount>
               <motion.div
-                className="fixed inset-0 z-50 bg-foreground/40"
+                className="fixed inset-0 z-50 bg-foreground/30 backdrop-blur-[2px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -44,12 +44,12 @@ export function Modal({ open, onOpenChange, title, description, children, size =
             >
               <motion.div
                 className={cn(
-                  "fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col border border-border-strong bg-surface shadow-flat",
+                  "fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-float",
                   sizes[size],
                 )}
-                initial={{ opacity: 0, scale: 0.97, y: 8 }}
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                exit={{ opacity: 0, scale: 0.97, y: 6 }}
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               >
                 <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
@@ -68,7 +68,7 @@ export function Modal({ open, onOpenChange, title, description, children, size =
                   {!preventClose && (
                     <Dialog.Close asChild>
                       <button
-                        className="flex h-7 w-7 shrink-0 items-center justify-center border border-transparent text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label="Close"
                       >
                         <X className="h-4 w-4" />

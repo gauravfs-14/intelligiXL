@@ -144,7 +144,7 @@ export function SmartColumnBuilderModal({
               disabled={i > step}
               className={cn(
                 "flex items-center gap-1.5 px-2 py-1 text-xs font-medium transition-colors",
-                i === step ? "bg-foreground text-background" : i < step ? "text-accent hover:underline" : "text-muted-foreground",
+                i === step ? "bg-foreground text-background" : i < step ? "text-primary hover:underline" : "text-muted-foreground",
               )}
             >
               <span className="font-mono">{i + 1}</span> {label}
@@ -163,7 +163,7 @@ export function SmartColumnBuilderModal({
           <div>
             <Label>Source columns</Label>
             <FieldHint className="mb-2">Selected columns are combined deterministically, e.g. “Title + Article Text”.</FieldHint>
-            <div className="max-h-56 overflow-y-auto border border-border">
+            <div className="max-h-56 overflow-y-auto rounded-md border border-border">
               {sourceColumns.map((c) => (
                 <label key={c.id} className="flex items-center gap-2 border-b border-border px-2 py-1.5 text-sm last:border-b-0">
                   <Checkbox
@@ -221,7 +221,7 @@ export function SmartColumnBuilderModal({
               onClick={() => setState({ ...state, type: opt.type })}
               className={cn(
                 "flex flex-col gap-1 border p-3 text-left transition-colors",
-                state.type === opt.type ? "border-accent bg-accent-muted" : "border-border-strong hover:bg-background",
+                state.type === opt.type ? "border-primary bg-primary/10" : "border-border hover:bg-background",
               )}
             >
               <span className="text-sm font-semibold">{opt.title}</span>
@@ -239,10 +239,10 @@ export function SmartColumnBuilderModal({
 
       {step === 5 && (
         <div className="flex flex-col gap-3">
-          <div className="border border-border-strong bg-background p-3 text-sm">
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
             <p className="font-semibold">{state.name}</p>
             <p className="mt-1 text-muted-foreground">{state.question}</p>
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-xs text-muted-foreground">
               {state.type} · {state.sourceColumns.join(" + ")}
             </p>
           </div>

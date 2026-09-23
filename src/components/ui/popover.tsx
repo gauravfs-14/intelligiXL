@@ -13,8 +13,8 @@ export function PopoverContent({ className, sideOffset = 6, ...props }: PopoverP
       <PopoverPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 border border-border-strong bg-surface p-3 shadow-flat-sm outline-none",
-          "data-[state=closed]:opacity-0 data-[state=open]:opacity-100 transition-opacity duration-150",
+          "z-50 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-hover outline-none",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}

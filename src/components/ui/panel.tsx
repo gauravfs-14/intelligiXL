@@ -2,12 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Panel({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("border border-border-strong bg-surface", className)}
-      {...props}
-    />
-  );
+  return <div className={cn("rounded-lg border border-border bg-surface shadow-flat transition-shadow", className)} {...props} />;
 }
 
 export function PanelHeader({ className, ...props }: React.ComponentProps<"div">) {

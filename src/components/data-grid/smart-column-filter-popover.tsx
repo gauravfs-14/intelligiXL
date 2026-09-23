@@ -45,7 +45,7 @@ export function SmartColumnFilterPopover({
       <PopoverContent className="w-72" align="start">
         <div className="flex flex-col gap-4">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Labels</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Labels</p>
             <div className="flex max-h-40 flex-col gap-1.5 overflow-y-auto">
               {labels.map((label) => (
                 <label key={label} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -56,7 +56,7 @@ export function SmartColumnFilterPopover({
             </div>
           </div>
           <div>
-            <p className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <span>Confidence</span>
               <span className="font-mono text-foreground">
                 {formatPercent(range[0] / 100)}–{formatPercent(range[1] / 100)}

@@ -31,10 +31,10 @@ export function DatasetSwitcher({ workspaceId }: { workspaceId: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex h-9 items-center gap-2 border border-border-strong bg-surface px-3 text-sm font-medium transition-shadow hover:shadow-flat-sm">
-          <Database className="h-3.5 w-3.5 text-muted" />
+        <button className="flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium transition-all hover:shadow-flat-sm hover:border-border-strong/30">
+          <Database className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="max-w-[16rem] truncate">{current ? current.filename : "Select a dataset"}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted" />
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[16rem]">

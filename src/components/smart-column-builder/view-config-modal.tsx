@@ -76,17 +76,17 @@ export function ViewConfigModal({
     <Modal open={open} onOpenChange={onOpenChange} title={smartColumn.name} description="Configuration & provenance" size="md">
       <div className="flex flex-col gap-4 text-sm">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Question</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Question</p>
           <p className="mt-1">{v.question}</p>
         </div>
         {v.instructions && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Instructions</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Instructions</p>
             <p className="mt-1 text-muted-foreground">{v.instructions}</p>
           </div>
         )}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Source columns</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source columns</p>
           <div className="mt-1 flex flex-wrap gap-1">
             {v.sourceColumns.map((c) => (
               <Badge key={c}>{c}</Badge>
@@ -94,8 +94,8 @@ export function ViewConfigModal({
           </div>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Labels</p>
-          <pre className="mt-1 overflow-x-auto border border-border bg-background p-2 font-mono text-xs">{JSON.stringify(v.labels, null, 2)}</pre>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Labels</p>
+          <pre className="mt-1 overflow-x-auto rounded-md border border-border bg-muted/40 p-2 font-mono text-xs">{JSON.stringify(v.labels, null, 2)}</pre>
         </div>
         <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
           <span>Version {v.versionNumber}</span>

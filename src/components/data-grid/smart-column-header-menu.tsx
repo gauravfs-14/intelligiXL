@@ -9,10 +9,10 @@ import {
   Filter,
   Info,
   ListChecks,
+  MoreVertical,
   Pencil,
   RefreshCw,
   RotateCcw,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import {
@@ -52,14 +52,15 @@ export function SmartColumnHeaderMenu({
   onGoToReview: () => void;
   onDelete: () => void;
 }) {
+  const [open, setOpen] = React.useState(false);
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex h-6 w-6 items-center justify-center text-muted transition-colors hover:text-foreground"
+          className={cnTrigger(open)}
           aria-label={`${name} column menu`}
         >
-          <Sparkles className="h-3.5 w-3.5" />
+          <MoreVertical className="h-3.5 w-3.5" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[14rem]">
@@ -95,10 +96,17 @@ export function SmartColumnHeaderMenu({
           <ListChecks className="h-3.5 w-3.5" /> Open in Review Queue
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onDelete} className="text-danger data-[highlighted]:bg-danger data-[highlighted]:text-danger-foreground">
+        <DropdownMenuItem onSelect={onDelete} variant="destructive">
           <Trash2 className="h-3.5 w-3.5" /> Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function cnTrigger(open: boolean) {
+  return [
+    "flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-all hover:bg-muted hover:text-foreground",
+    open ? "opacity-100" : "opacity-0 group-hover/head:opacity-100 focus-visible:opacity-100",
+  ].join(" ");
 }

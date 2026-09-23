@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import type { JobStatus } from "@/generated/prisma/browser";
 
-const TONE: Record<JobStatus, "muted" | "accent" | "success" | "danger" | "warning"> = {
+const TONE: Record<JobStatus, "muted" | "primary" | "success" | "danger" | "warning"> = {
   QUEUED: "muted",
-  RUNNING: "accent",
+  RUNNING: "primary",
   COMPLETED: "success",
   FAILED: "danger",
   CANCELLED: "warning",

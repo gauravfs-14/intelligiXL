@@ -28,7 +28,7 @@ export function ReviewValuePicker({
           size="sm"
           variant={value === opt ? "primary" : "outline"}
           onClick={() => onChange(opt)}
-          className={cn(value === opt && "ring-2 ring-accent ring-offset-1 ring-offset-background")}
+          className={cn(value === opt && "ring-2 ring-primary ring-offset-1 ring-offset-background")}
         >
           {opt}
         </Button>

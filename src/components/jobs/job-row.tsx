@@ -62,12 +62,12 @@ export function JobRow({ job }: { job: JobDto }) {
           }}
           aria-expanded={expanded}
         >
-          {expanded ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />}
+          {expanded ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="truncate text-sm font-semibold">{job.smartColumn?.name ?? "Deleted Smart Column"}</span>
               <JobStatusBadge status={job.status} />
-              <span className="text-[11px] uppercase tracking-wide text-muted">{JOB_TYPE_LABEL[job.jobType] ?? job.jobType}</span>
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{JOB_TYPE_LABEL[job.jobType] ?? job.jobType}</span>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
@@ -114,7 +114,7 @@ export function JobRow({ job }: { job: JobDto }) {
                     Showing the first {failuresData.failures.length} of {failuresData.totalFailures.toLocaleString()} failures.
                   </p>
                 )}
-                <div className="max-h-64 overflow-y-auto border border-border">
+                <div className="max-h-64 overflow-y-auto rounded-md border border-border">
                   {failuresData.failures.map((f) => (
                     <div key={f.id} className="flex items-start gap-2 border-b border-border px-2 py-1.5 text-xs last:border-b-0">
                       <span className="shrink-0 font-mono text-muted-foreground">#{f.rowIndex + 1}</span>

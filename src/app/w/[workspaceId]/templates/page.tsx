@@ -71,12 +71,12 @@ export default function TemplatesPage({ params }: PageProps<"/w/[workspaceId]/te
       <h1 className="text-lg font-semibold tracking-tight">Templates & Recipes</h1>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {data.templates.map((t) => (
-          <Panel key={t.id} className="flex flex-col">
+          <Panel key={t.id} className="flex flex-col transition-all hover:-translate-y-0.5 hover:shadow-hover">
             <PanelBody className="flex flex-1 flex-col gap-2">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold">{t.name}</p>
                 {t.isBuiltIn ? (
-                  <Badge tone="accent">Recipe</Badge>
+                  <Badge tone="primary">Recipe</Badge>
                 ) : (
                   <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id, t.name)} aria-label={`Delete ${t.name}`}>
                     <Trash2 className="h-3.5 w-3.5 text-danger" />

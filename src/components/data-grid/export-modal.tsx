@@ -57,7 +57,7 @@ export function ExportModal({
     <Modal open={open} onOpenChange={onOpenChange} title="Export dataset" description="Download the augmented dataset with your Smart Columns." size="sm">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Format</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Format</span>
           <Select value={format} onValueChange={(v) => setFormat(v as "CSV" | "XLSX")}>
             <SelectTrigger>
               <SelectValue />
@@ -70,7 +70,7 @@ export function ExportModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Include</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Include</span>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={options.includeConfidence} onCheckedChange={(v) => setOptions((o) => ({ ...o, includeConfidence: Boolean(v) }))} />
             Confidence

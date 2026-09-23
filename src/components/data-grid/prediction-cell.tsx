@@ -55,7 +55,7 @@ export function PredictionCell({ prediction, showConfidence }: { prediction: Pre
       <PopoverContent className="w-80" align="start">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Probability distribution</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Probability distribution</p>
             {prediction.review && prediction.review.status !== "NOT_REVIEWED" && (
               <Badge tone={prediction.review.status === "CORRECTED" ? "warning" : "success"}>{prediction.review.status}</Badge>
             )}

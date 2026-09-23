@@ -84,7 +84,7 @@ export function LabelEditor({ state, onChange }: { state: BuilderState; onChange
       <p className="text-xs text-muted-foreground">List levels from low to high (2–10). Order matters.</p>
       {state.rating.map((level, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center border border-border font-mono text-[11px] text-muted">{i}</span>
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border font-mono text-[11px] text-muted-foreground">{i}</span>
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <Input
             value={level}

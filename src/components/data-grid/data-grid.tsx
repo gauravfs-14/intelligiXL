@@ -11,7 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Filter, GripVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, Filter, GripVertical, LayoutGrid, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ExpandableCell } from "./expandable-cell";
@@ -21,7 +21,6 @@ import { SmartColumnHeaderMenu } from "./smart-column-header-menu";
 import { SmartColumnFilterPopover } from "./smart-column-filter-popover";
 import { applyFilters, EMPTY_FILTERS, type GridFilterState } from "./filters";
 import { EmptyState } from "@/components/ui/states";
-import { LayoutGrid } from "lucide-react";
 import type { DatasetColumnDto, DatasetRowDto, PredictionDto, WorkbenchSmartColumnDto } from "@/types/workbench";
 
 interface RowShape {
@@ -29,7 +28,7 @@ interface RowShape {
   predictions: Map<string, PredictionDto>;
 }
 
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT = 44;
 
 export function DataGrid({
   columns: datasetColumns,
@@ -66,6 +65,7 @@ export function DataGrid({
   const [confidenceVisible, setConfidenceVisible] = React.useState<Record<string, boolean>>({});
   const [openFilterFor, setOpenFilterFor] = React.useState<string | null>(null);
   const [dragCol, setDragCol] = React.useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = React.useState<string | null>(null);
   const [sortModeBySmartColumn, setSortModeBySmartColumn] = React.useState<Record<string, "label" | "confidence">>({});
 
   const versionToSmartColumn = React.useMemo(() => {
@@ -120,7 +120,7 @@ export function DataGrid({
   const columns = React.useMemo<ColumnDef<RowShape>[]>(() => {
     const select: ColumnDef<RowShape> = {
       id: "__select",
-      size: 36,
+      size: 40,
       enableSorting: false,
       header: ({ table }) => (
         <Checkbox
@@ -138,7 +138,7 @@ export function DataGrid({
       id: `col:${col.name}`,
       accessorFn: (r) => r.row.data[col.name],
       size: 220,
-      header: () => <SourceHeader name={col.name} />,
+      header: ({ column }) => <SourceHeader name={col.name} sortDir={column.getIsSorted()} onSort={() => column.toggleSorting()} />,
       cell: ({ getValue }) => <ExpandableCell value={getValue()} />,
       sortingFn: (a, b) => {
         const av = a.original.row.data[col.name];
@@ -151,12 +151,13 @@ export function DataGrid({
       id: `sc:${sc.id}`,
       accessorFn: (r) => r.predictions.get(sc.id)?.predictedLabel ?? "",
       size: 200,
-      header: () => (
+      header: ({ column }) => (
         <SmartHeader
           smartColumn={sc}
           showConfidence={confidenceVisible[sc.id] !== false}
           hasFailed={hasFailedBySmartColumn.get(sc.id) ?? false}
           filterOpen={openFilterFor === sc.id}
+          sortDir={column.getIsSorted()}
           onOpenFilter={() => setOpenFilterFor(openFilterFor === sc.id ? null : sc.id)}
           onCloseFilter={() => setOpenFilterFor(null)}
           labelOptions={labelOptionsBySmartColumn.get(sc.id) ?? []}
@@ -242,6 +243,7 @@ export function DataGrid({
   );
 
   function handleDrop(targetId: string) {
+    setDragOverCol(null);
     if (!dragCol || dragCol === targetId) return;
     const order = table.getAllLeafColumns().map((c) => c.id);
     const from = order.indexOf(dragCol);
@@ -254,7 +256,9 @@ export function DataGrid({
 
   if (rows.length === 0) {
     return (
-      <EmptyState icon={LayoutGrid} title="This dataset has no rows" description="Something went wrong during import." />
+      <div className="p-6">
+        <EmptyState icon={LayoutGrid} title="This dataset has no rows" description="Something went wrong during import." />
+      </div>
     );
   }
 
@@ -274,23 +278,30 @@ export function DataGrid({
       />
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <div style={{ width: table.getTotalSize() }}>
-          <div className="sticky top-0 z-10 flex border-b border-border-strong bg-surface">
+          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/60 backdrop-blur-sm">
             {table.getHeaderGroups().map((hg) =>
               hg.headers.map((header) => (
                 <div
                   key={header.id}
                   draggable={header.column.id !== "__select"}
                   onDragStart={() => setDragCol(header.column.id)}
-                  onDragOver={(e) => e.preventDefault()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (header.column.id !== "__select") setDragOverCol(header.column.id);
+                  }}
+                  onDragLeave={() => setDragOverCol((c) => (c === header.column.id ? null : c))}
                   onDrop={() => handleDrop(header.column.id)}
                   style={{ width: header.getSize() }}
-                  className="relative shrink-0 select-none border-r border-border px-2 py-1.5 text-xs font-semibold"
+                  className={cn(
+                    "group/head relative flex h-10 shrink-0 select-none items-center border-r border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors last:border-r-0",
+                    dragOverCol === header.column.id && "bg-primary/10",
+                  )}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                   <div
                     onMouseDown={header.getResizeHandler()}
                     onTouchStart={header.getResizeHandler()}
-                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-accent"
+                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize opacity-0 transition-opacity group-hover/head:opacity-100 hover:bg-primary/40"
                   />
                 </div>
               )),
@@ -302,14 +313,18 @@ export function DataGrid({
               return (
                 <div
                   key={row.id}
-                  className={cn("absolute left-0 top-0 flex w-full border-b border-border", row.getIsSelected() && "bg-accent-muted")}
+                  className={cn(
+                    "group absolute left-0 top-0 flex w-full border-b border-border transition-colors hover:bg-muted/40",
+                    row.getIsSelected() && "bg-primary/[0.06] hover:bg-primary/[0.08]",
+                  )}
                   style={{ height: vi.size, transform: `translateY(${vi.start}px)` }}
                 >
+                  {row.getIsSelected() && <div className="absolute inset-y-0 left-0 w-0.5 bg-primary" aria-hidden />}
                   {row.getVisibleCells().map((cell) => (
                     <div
                       key={cell.id}
                       style={{ width: cell.column.getSize() }}
-                      className="flex shrink-0 items-center overflow-hidden border-r border-border px-2"
+                      className="flex shrink-0 items-center overflow-hidden border-r border-border/70 px-2.5 last:border-r-0"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
@@ -320,22 +335,34 @@ export function DataGrid({
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-border-strong bg-surface px-3 py-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
         <span>
-          {filteredRows.length.toLocaleString()} of {rows.length.toLocaleString()} rows
+          <span className="font-medium text-foreground">{filteredRows.length.toLocaleString()}</span> of {rows.length.toLocaleString()} rows
         </span>
-        <span>{smartColumns.length} Smart Column(s)</span>
+        <span className="flex items-center gap-1">
+          <Sparkles className="h-3 w-3" /> {smartColumns.length} Smart Column{smartColumns.length === 1 ? "" : "s"}
+        </span>
       </div>
     </div>
   );
 }
 
-function SourceHeader({ name }: { name: string }) {
+function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
+  if (!dir) return <ArrowUp className="h-3 w-3 shrink-0 text-transparent transition-colors group-hover/head:text-muted-foreground/40" />;
+  return dir === "asc" ? (
+    <ArrowUp className="h-3 w-3 shrink-0 text-primary" />
+  ) : (
+    <ArrowDown className="h-3 w-3 shrink-0 text-primary" />
+  );
+}
+
+function SourceHeader({ name, sortDir, onSort }: { name: string; sortDir: false | "asc" | "desc"; onSort: () => void }) {
   return (
-    <div className="flex items-center gap-1">
-      <GripVertical className="h-3 w-3 shrink-0 cursor-grab text-muted-foreground" />
-      <span className="truncate">{name}</span>
-    </div>
+    <button type="button" onClick={onSort} className="flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left">
+      <GripVertical className="h-3 w-3 shrink-0 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground" onClick={(e) => e.stopPropagation()} />
+      <span className="truncate transition-colors group-hover/head:text-foreground">{name}</span>
+      <SortIcon dir={sortDir} />
+    </button>
   );
 }
 
@@ -344,6 +371,7 @@ function SmartHeader({
   showConfidence,
   hasFailed,
   filterOpen,
+  sortDir,
   onOpenFilter,
   onCloseFilter,
   labelOptions,
@@ -363,6 +391,7 @@ function SmartHeader({
   showConfidence: boolean;
   hasFailed: boolean;
   filterOpen: boolean;
+  sortDir: false | "asc" | "desc";
   onOpenFilter: () => void;
   onCloseFilter: () => void;
   labelOptions: string[];
@@ -378,10 +407,13 @@ function SmartHeader({
   onDelete: () => void;
   onGoToReview: () => void;
 }) {
+  const hasActiveFilter = Boolean(filterValue.labels?.length || filterValue.minConfidence !== undefined || filterValue.maxConfidence !== undefined);
   return (
-    <div className="flex items-center gap-1">
-      <GripVertical className="h-3 w-3 shrink-0 cursor-grab text-muted-foreground" />
-      <span className="truncate text-accent">{smartColumn.name}</span>
+    <div className="flex w-full min-w-0 items-center gap-1">
+      <GripVertical className="h-3 w-3 shrink-0 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground" />
+      <Sparkles className="h-3 w-3 shrink-0 text-primary" />
+      <span className="truncate font-medium text-primary">{smartColumn.name}</span>
+      {sortDir && <SortIcon dir={sortDir} />}
       <SmartColumnFilterPopover
         open={filterOpen}
         onOpenChange={(o) => (o ? onOpenFilter() : onCloseFilter())}
@@ -389,12 +421,19 @@ function SmartHeader({
         value={filterValue}
         onChange={onFilterChange}
         anchor={
-          <button onClick={onOpenFilter} className="text-muted hover:text-foreground" aria-label={`Filter ${smartColumn.name}`}>
+          <button
+            onClick={onOpenFilter}
+            className={cn(
+              "shrink-0 rounded-sm p-0.5 transition-colors hover:bg-muted hover:text-foreground",
+              hasActiveFilter ? "text-primary" : "text-muted-foreground",
+            )}
+            aria-label={`Filter ${smartColumn.name}`}
+          >
             <Filter className="h-3 w-3" />
           </button>
         }
       />
-      <div className="ml-auto">
+      <div className="ml-auto shrink-0">
         <SmartColumnHeaderMenu
           name={smartColumn.name}
           showConfidence={showConfidence}

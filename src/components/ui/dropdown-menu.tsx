@@ -17,8 +17,8 @@ export function DropdownMenuContent({ className, sideOffset = 6, ...props }: Dro
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[10rem] origin-[var(--radix-dropdown-menu-content-transform-origin)] border border-border-strong bg-surface p-1 text-sm shadow-flat-sm transition-[opacity,transform] duration-150",
-          "data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100",
+          "z-50 min-w-[10rem] origin-[var(--radix-dropdown-menu-content-transform-origin)] rounded-md border border-border bg-popover p-1 text-sm text-popover-foreground shadow-hover",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}
@@ -27,11 +27,17 @@ export function DropdownMenuContent({ className, sideOffset = 6, ...props }: Dro
   );
 }
 
-export function DropdownMenuItem({ className, inset, ...props }: DropdownMenuPrimitive.DropdownMenuItemProps & { inset?: boolean }) {
+export function DropdownMenuItem({
+  className,
+  inset,
+  variant = "default",
+  ...props
+}: DropdownMenuPrimitive.DropdownMenuItemProps & { inset?: boolean; variant?: "default" | "destructive" }) {
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 px-2 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+        "flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40",
+        variant === "destructive" && "text-danger data-[highlighted]:bg-danger-muted data-[highlighted]:text-danger",
         inset && "pl-7",
         className,
       )}
@@ -45,14 +51,14 @@ export function DropdownMenuCheckboxItem({ className, children, checked, ...prop
     <DropdownMenuPrimitive.CheckboxItem
       checked={checked}
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 py-1.5 pl-7 pr-2 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-7 pr-2 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
         className,
       )}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-3.5 w-3.5 text-primary" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -63,7 +69,7 @@ export function DropdownMenuCheckboxItem({ className, children, checked, ...prop
 export function DropdownMenuLabel({ className, ...props }: DropdownMenuPrimitive.DropdownMenuLabelProps) {
   return (
     <DropdownMenuPrimitive.Label
-      className={cn("px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted", className)}
+      className={cn("px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground", className)}
       {...props}
     />
   );
@@ -77,7 +83,7 @@ export function DropdownMenuSubTrigger({ className, children, ...props }: Dropdo
   return (
     <DropdownMenuPrimitive.SubTrigger
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+        "flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
         className,
       )}
       {...props}
@@ -92,7 +98,7 @@ export function DropdownMenuSubContent({ className, ...props }: DropdownMenuPrim
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.SubContent
-        className={cn("z-50 min-w-[8rem] border border-border-strong bg-surface p-1 shadow-flat-sm", className)}
+        className={cn("z-50 min-w-[8rem] rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-hover", className)}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>

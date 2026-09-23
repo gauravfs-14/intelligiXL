@@ -13,10 +13,11 @@ export function TabsTrigger({ className, ...props }: TabsPrimitive.TabsTriggerPr
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "relative px-3 py-2 text-sm font-medium text-muted transition-colors outline-none",
+        "relative px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors",
         "hover:text-foreground",
         "data-[state=active]:text-foreground",
-        "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-transparent data-[state=active]:after:bg-accent",
+        "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent after:transition-colors after:duration-200 data-[state=active]:after:bg-primary",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       {...props}
@@ -25,5 +26,10 @@ export function TabsTrigger({ className, ...props }: TabsPrimitive.TabsTriggerPr
 }
 
 export function TabsContent({ className, ...props }: TabsPrimitive.TabsContentProps) {
-  return <TabsPrimitive.Content className={cn("outline-none", className)} {...props} />;
+  return (
+    <TabsPrimitive.Content
+      className={cn("outline-none data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:duration-200", className)}
+      {...props}
+    />
+  );
 }

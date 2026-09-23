@@ -26,7 +26,7 @@ export function Sheet({ open, onOpenChange, title, description, children, width 
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild forceMount>
               <motion.div
-                className="fixed inset-0 z-50 bg-foreground/40"
+                className="fixed inset-0 z-50 bg-foreground/30 backdrop-blur-[2px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -36,7 +36,7 @@ export function Sheet({ open, onOpenChange, title, description, children, width 
             <Dialog.Content asChild forceMount>
               <motion.div
                 className={cn(
-                  "fixed right-0 top-0 z-50 flex h-full w-[calc(100vw-2rem)] flex-col border-l border-border-strong bg-surface shadow-flat",
+                  "fixed right-0 top-0 z-50 flex h-full w-[calc(100vw-2rem)] flex-col border-l border-border bg-popover text-popover-foreground shadow-float",
                   widths[width],
                 )}
                 initial={{ x: "100%" }}
@@ -57,7 +57,7 @@ export function Sheet({ open, onOpenChange, title, description, children, width 
                   </div>
                   <Dialog.Close asChild>
                     <button
-                      className="flex h-7 w-7 shrink-0 items-center justify-center border border-transparent text-muted transition-colors hover:border-border-strong hover:text-foreground"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       aria-label="Close"
                     >
                       <X className="h-4 w-4" />

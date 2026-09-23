@@ -1,3 +1,4 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { CrosstabResult } from "@/lib/insights/compute";
 
@@ -7,41 +8,44 @@ export function CrosstabTable({ result, labelA, labelB }: { result: CrosstabResu
   const max = Math.max(1, ...result.labelsA.flatMap((a) => result.labelsB.map((b) => result.matrix[a]?.[b] ?? 0)));
 
   return (
-    <div className="overflow-auto border border-border-strong">
-      <table className="w-full border-collapse text-xs">
-        <thead>
-          <tr>
-            <th className="border-b border-r border-border-strong bg-surface p-2 text-left">
-              <span className="text-muted-foreground">{labelA}</span> \ <span className="text-muted-foreground">{labelB}</span>
-            </th>
+    <div className="overflow-auto rounded-md border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="text-muted-foreground">
+              {labelA} <span className="text-border">\</span> {labelB}
+            </TableHead>
             {result.labelsB.map((b) => (
-              <th key={b} className="border-b border-r border-border bg-surface p-2 text-left font-semibold last:border-r-0">
+              <TableHead key={b} className="font-semibold text-foreground">
                 {b}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {result.labelsA.map((a) => (
-            <tr key={a}>
-              <th className="border-r border-b border-border bg-surface p-2 text-left font-semibold">{a}</th>
+            <TableRow key={a}>
+              <TableCell className="font-semibold text-foreground">{a}</TableCell>
               {result.labelsB.map((b) => {
                 const value = result.matrix[a]?.[b] ?? 0;
                 const intensity = value / max;
                 return (
-                  <td
+                  <TableCell
                     key={b}
-                    className={cn("border-r border-b border-border p-2 text-right font-mono last:border-r-0", value > 0 && "text-foreground")}
-                    style={{ backgroundColor: value > 0 ? `color-mix(in srgb, var(--color-accent) ${Math.round(intensity * 45)}%, var(--color-surface))` : undefined }}
+                    className={cn("text-right font-mono transition-colors", value > 0 && "text-foreground")}
+                    style={{
+                      backgroundColor:
+                        value > 0 ? `color-mix(in srgb, var(--color-primary) ${Math.round(intensity * 30)}%, transparent)` : undefined,
+                    }}
                   >
                     {value || ""}
-                  </td>
+                  </TableCell>
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -17,15 +17,15 @@ export function JobsNavButton({ workspaceId }: { workspaceId: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="relative flex h-9 items-center gap-1.5 border border-border-strong bg-surface px-3 text-sm font-medium transition-shadow hover:shadow-flat-sm"
+        className="relative flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-medium transition-all hover:shadow-flat-sm hover:border-border-strong/30"
         aria-label="Generation jobs"
       >
-        <Activity className="h-3.5 w-3.5 text-muted" />
+        <Activity className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="hidden sm:inline">Jobs</span>
         {activeCount > 0 && (
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 bg-accent" />
+            <span className="absolute inline-flex h-full w-full animate-ping bg-primary opacity-75" />
+            <span className="relative inline-flex h-2 w-2 bg-primary" />
           </span>
         )}
       </button>

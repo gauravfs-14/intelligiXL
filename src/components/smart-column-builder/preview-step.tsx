@@ -43,7 +43,7 @@ export function PreviewStep({
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center gap-2 border border-dashed border-border py-10 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border py-10 text-sm text-muted-foreground">
           <InlineSpinner /> Evaluating sample against Jev…
         </div>
       )}
@@ -51,7 +51,7 @@ export function PreviewStep({
       {!loading && results && (
         <div className="flex flex-col gap-2">
           {results.map((r) => (
-            <div key={r.rowId} className="border border-border p-3">
+            <div key={r.rowId} className="rounded-md border border-border p-3 transition-colors hover:bg-muted/30">
               <p className="mb-2 line-clamp-3 whitespace-pre-line text-xs text-muted-foreground">{r.sourceText}</p>
               {r.result.status === "success" ? (
                 <div className="flex flex-col gap-2">
@@ -69,7 +69,7 @@ export function PreviewStep({
       )}
 
       {!loading && !results && (
-        <div className="flex items-center justify-center border border-dashed border-border py-10 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center rounded-md border border-dashed border-border py-10 text-sm text-muted-foreground">
           Run a preview before generating the full column.
         </div>
       )}

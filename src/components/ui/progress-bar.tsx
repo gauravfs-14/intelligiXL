@@ -8,13 +8,13 @@ interface ProgressBarProps {
   value: number;
   max?: number;
   className?: string;
-  tone?: "accent" | "success" | "danger" | "warning";
+  tone?: "primary" | "success" | "danger" | "warning";
   label?: string;
 }
 
-const toneClass = { accent: "bg-accent", success: "bg-success", danger: "bg-danger", warning: "bg-warning" };
+const toneClass = { primary: "bg-primary", success: "bg-success", danger: "bg-danger", warning: "bg-warning" };
 
-export function ProgressBar({ value, max = 100, className, tone = "accent", label }: ProgressBarProps) {
+export function ProgressBar({ value, max = 100, className, tone = "primary", label }: ProgressBarProps) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
     <div className={cn("w-full", className)}>
@@ -22,11 +22,11 @@ export function ProgressBar({ value, max = 100, className, tone = "accent", labe
         value={pct}
         max={100}
         aria-label={label}
-        className="relative h-2.5 w-full overflow-hidden border border-border-strong bg-surface"
+        className="relative h-2 w-full overflow-hidden rounded-full bg-muted"
       >
         <ProgressPrimitive.Indicator asChild>
           <motion.div
-            className={cn("h-full", toneClass[tone])}
+            className={cn("h-full rounded-full", toneClass[tone])}
             initial={false}
             animate={{ width: `${pct}%` }}
             transition={{ type: "spring", stiffness: 120, damping: 20 }}

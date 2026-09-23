@@ -8,11 +8,11 @@ export default async function RootPage() {
 
   if (workspaces.length === 0) {
     const created = await prisma.workspace.create({ data: { ownerId, name: "My Workspace" } });
-    redirect(`/w/${created.id}/data`);
+    redirect(`/w/${created.id}`);
   }
 
   if (workspaces.length === 1) {
-    redirect(`/w/${workspaces[0].id}/data`);
+    redirect(`/w/${workspaces[0].id}`);
   }
 
   redirect("/workspaces");
