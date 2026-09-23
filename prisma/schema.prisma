@@ -1,0 +1,320 @@
+// IntelligiXL data model.
+// Auth is intentionally out of scope (see project decision): a single seeded
+// User exists purely so Workspace.ownerId / Review.reviewerId have a stable
+// owner for provenance and auditability (NFR-014), not to gate access.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum DatasetFormat {
+  CSV
+  XLSX
+  JSON
+  JSONL
+}
+
+enum DatasetStatus {
+  VALIDATING
+  READY
+  FAILED
+}
+
+enum ColumnDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  JSON
+}
+
+enum SmartColumnType {
+  BINARY
+  CATEGORICAL
+  RATING
+}
+
+enum PredictionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  NOT_PROCESSED
+}
+
+// Mirrors AIR-006 provider error states, collapsed to what the UI needs to branch on.
+enum PredictionErrorReason {
+  EMPTY_SOURCE
+  TIMEOUT
+  RATE_LIMITED
+  PROVIDER_UNAVAILABLE
+  INVALID_RESPONSE
+  AUTH_FAILURE
+  UNKNOWN
+}
+
+enum ReviewStatus {
+  NOT_REVIEWED
+  CONFIRMED
+  CORRECTED
+  SKIPPED
+}
+
+enum JobType {
+  SMART_COLUMN_GENERATION
+  SMART_COLUMN_RETRY
+  EXPORT
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ExportFormat {
+  CSV
+  XLSX
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  workspaces Workspace[]
+  reviews    Review[]
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  datasets     Dataset[]
+  smartColumns SmartColumn[]
+  jobs         Job[]
+  templates    Template[]
+  studyEvents  StudyEvent[]
+  exports      ExportRecord[]
+
+  @@index([ownerId])
+}
+
+model Dataset {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  filename       String
+  originalFormat DatasetFormat
+  rowCount       Int           @default(0)
+  columnCount    Int           @default(0)
+  storageKey     String
+  status         DatasetStatus @default(VALIDATING)
+  warning        String?
+  createdAt      DateTime      @default(now())
+
+  columns      DatasetColumn[]
+  rows         DatasetRow[]
+  smartColumns SmartColumn[]
+  exports      ExportRecord[]
+  jobs         Job[]
+
+  @@index([workspaceId])
+}
+
+model DatasetColumn {
+  id       String         @id @default(cuid())
+  datasetId String
+  dataset  Dataset        @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  name     String
+  dataType ColumnDataType
+  position Int
+  isSource Boolean        @default(true)
+
+  @@unique([datasetId, name])
+  @@index([datasetId])
+}
+
+model DatasetRow {
+  id        String  @id @default(cuid())
+  datasetId String
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  rowIndex  Int
+  data      Json
+
+  predictions Prediction[]
+
+  @@unique([datasetId, rowIndex])
+  @@index([datasetId])
+}
+
+model SmartColumn {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  datasetId       String
+  dataset         Dataset         @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  name            String
+  type            SmartColumnType
+  activeVersionId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  versions SmartColumnVersion[] @relation("SmartColumnVersions")
+  jobs     Job[]
+
+  @@unique([datasetId, name])
+  @@index([workspaceId])
+}
+
+// A new row is created here (not an update-in-place) whenever a Smart
+// Column's question/instructions/labels/source columns change — see FR-040.
+model SmartColumnVersion {
+  id              String   @id @default(cuid())
+  smartColumnId   String
+  smartColumn     SmartColumn @relation("SmartColumnVersions", fields: [smartColumnId], references: [id], onDelete: Cascade)
+  versionNumber   Int
+  question        String
+  instructions    String?
+  sourceColumns   String[]
+  // BINARY: { yes: string|null, no: string|null }
+  // CATEGORICAL: { [option: string]: string|null }
+  // RATING: string[] (ordered levels, low -> high)
+  labels          Json
+  unclearEnabled  Boolean  @default(false)
+  modelProvider   String   @default("typesafe")
+  modelIdentifier String   @default("jev-latest")
+  createdAt       DateTime @default(now())
+
+  predictions Prediction[]
+  jobs        Job[]
+
+  @@unique([smartColumnId, versionNumber])
+  @@index([smartColumnId])
+}
+
+model Prediction {
+  id                   String                 @id @default(cuid())
+  datasetRowId         String
+  datasetRow           DatasetRow             @relation(fields: [datasetRowId], references: [id], onDelete: Cascade)
+  smartColumnVersionId String
+  smartColumnVersion   SmartColumnVersion     @relation(fields: [smartColumnVersionId], references: [id], onDelete: Cascade)
+  status               PredictionStatus       @default(PENDING)
+  errorReason          PredictionErrorReason?
+  predictedLabel       String?
+  confidence           Float?
+  // Choice: { [option]: number }. Rating: { [levelIndex as string]: number }.
+  probabilities        Json?
+  // Rating only — the probability-weighted score, can land between levels.
+  score                Float?
+  // Rating only — level index (as string) -> level description.
+  legend               Json?
+  modelVersion         String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  review Review?
+
+  @@unique([datasetRowId, smartColumnVersionId])
+  @@index([smartColumnVersionId, status])
+  @@index([smartColumnVersionId, confidence])
+  @@index([smartColumnVersionId, predictedLabel])
+}
+
+// The AI prediction above is never overwritten by a human correction — the
+// original stays intact and the human value lives here (§19 core principle).
+model Review {
+  id           String       @id @default(cuid())
+  predictionId String       @unique
+  prediction   Prediction   @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  reviewedValue String?
+  status       ReviewStatus @default(NOT_REVIEWED)
+  reviewerId   String?
+  reviewer     User?        @relation(fields: [reviewerId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([status])
+}
+
+model Job {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobType              JobType
+  status               JobStatus @default(QUEUED)
+  totalItems           Int       @default(0)
+  completedItems       Int       @default(0)
+  failedItems          Int       @default(0)
+  datasetId            String?
+  dataset              Dataset?  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  smartColumnId        String?
+  smartColumn          SmartColumn?        @relation(fields: [smartColumnId], references: [id], onDelete: Cascade)
+  smartColumnVersionId String?
+  smartColumnVersion   SmartColumnVersion? @relation(fields: [smartColumnVersionId], references: [id], onDelete: Cascade)
+  errorLog             Json?
+  createdAt            DateTime  @default(now())
+  finishedAt           DateTime?
+
+  @@index([workspaceId])
+  @@index([smartColumnVersionId])
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  // Reusable SmartColumn definition: { type, question, instructions, labels, sourceColumnHints }
+  config      Json
+  isBuiltIn   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+}
+
+model StudyEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  eventType   String
+  payload     Json
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId, eventType])
+}
+
+model ExportRecord {
+  id          String       @id @default(cuid())
+  workspaceId String
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  datasetId   String
+  dataset     Dataset      @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  format      ExportFormat
+  fields      Json
+  storageKey  String
+  createdAt   DateTime     @default(now())
+
+  @@index([workspaceId])
+}

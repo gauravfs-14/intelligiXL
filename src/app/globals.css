@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * IntelligiXL design language
+ * "Instrument panel": sharp corners, one electric accent, flat semantic
+ * colors, hard-offset shadows instead of soft blur, no gradients anywhere.
+ * ------------------------------------------------------------------------ */
+
+:root {
+  --background: #fafaf8;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --foreground: #101113;
+  --muted: #6b7076;
+  --muted-foreground: #8a8f96;
+  --border: #e4e4e0;
+  --border-strong: #101113;
+
+  --accent: #3654ff;
+  --accent-foreground: #ffffff;
+  --accent-muted: #eef0ff;
+
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --warning-muted: #fef3e2;
+
+  --danger: #c81e3a;
+  --danger-foreground: #ffffff;
+  --danger-muted: #fdeaec;
+
+  --success: #0a7a55;
+  --success-foreground: #ffffff;
+  --success-muted: #e6f5ef;
+
+  --radius: 0px;
+  --shadow-color: 16 17 19;
+  --shadow-flat: 3px 3px 0 0 rgb(var(--shadow-color) / 1);
+  --shadow-flat-sm: 2px 2px 0 0 rgb(var(--shadow-color) / 1);
+  --shadow-float: 0 8px 24px -8px rgb(var(--shadow-color) / 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0b;
+    --surface: #131316;
+    --surface-raised: #18181c;
+    --foreground: #f2f2f0;
+    --muted: #9a9aa0;
+    --muted-foreground: #75757c;
+    --border: #29292e;
+    --border-strong: #f2f2f0;
+
+    --accent: #7189ff;
+    --accent-foreground: #0a0a0b;
+    --accent-muted: #1a2050;
+
+    --warning: #f4a339;
+    --warning-foreground: #0a0a0b;
+    --warning-muted: #3a2a0f;
+
+    --danger: #ff6b7f;
+    --danger-foreground: #0a0a0b;
+    --danger-muted: #3a1420;
+
+    --success: #3ddba0;
+    --success-foreground: #0a0a0b;
+    --success-muted: #0f3327;
+
+    --shadow-color: 0 0 0;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted: var(--accent-muted);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-muted: var(--danger-muted);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+
+  --radius-none: 0px;
+  --radius-sharp: var(--radius);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --shadow-flat: var(--shadow-flat);
+  --shadow-flat-sm: var(--shadow-flat-sm);
+  --shadow-float: var(--shadow-float);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+/* Every corner in this app is a right angle. */
+* {
+  border-radius: 0 !important;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* Thin, high-contrast scrollbars fit the instrument-panel feel better than
+ * the chunky OS default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border: 2px solid var(--color-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
