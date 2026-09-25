@@ -28,7 +28,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Change theme">
+        <Button variant="ghost" size="icon-sm" className="rounded-xl" aria-label="Change theme">
           {mounted ? <Icon className="h-3.5 w-3.5" /> : <span className="h-3.5 w-3.5" />}
         </Button>
       </DropdownMenuTrigger>

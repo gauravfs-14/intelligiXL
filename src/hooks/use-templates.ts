@@ -26,3 +26,11 @@ export function useDeleteTemplate(workspaceId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["templates", workspaceId] }),
   });
 }
+
+export function useUseTemplate(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiPost<{ template: TemplateDto }>(`/api/templates/${id}/use`, { workspaceId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates", workspaceId] }),
+  });
+}

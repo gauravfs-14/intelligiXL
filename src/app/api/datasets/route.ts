@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ColumnDataType, DatasetFormat, DatasetStatus, type Prisma } from "@/generated/prisma/client";
+import { ColumnDataType, DatasetFormat, DatasetStatus, PredictionStatus, ReviewStatus, type Prisma } from "@/generated/prisma/client";
+import { resolveSettings } from "@/lib/decision-models/catalog";
 import { parseDataset } from "@/lib/parsing";
 import { storage } from "@/lib/storage";
 import { ApiError, withErrorHandling } from "@/lib/api/respond";
+import { logActivity, plural } from "@/lib/activity/log";
 
 export const GET = withErrorHandling(async (req: Request) => {
   const workspaceId = new URL(req.url).searchParams.get("workspaceId");
@@ -12,9 +14,42 @@ export const GET = withErrorHandling(async (req: Request) => {
   const datasets = await prisma.dataset.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { smartColumns: true } } },
+    include: {
+      _count: { select: { smartColumns: true } },
+      smartColumns: {
+        select: { id: true, name: true, type: true, activeVersionId: true, versions: { select: { id: true, settings: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
-  return NextResponse.json({ datasets });
+
+  // Per Smart Column: successful predictions under that column's own review
+  // threshold that nobody has confirmed/corrected yet — the same set the
+  // Review queue opens on, so the dashboard number and the queue agree.
+  const withCounts = await Promise.all(
+    datasets.map(async ({ smartColumns, ...d }) => ({
+      ...d,
+      smartColumns: await Promise.all(
+        smartColumns.map(async ({ versions, ...sc }) => {
+          const active = versions.find((v) => v.id === sc.activeVersionId);
+          const settings = resolveSettings(active?.settings);
+          const needsReview =
+            active && settings.lowConfidenceAction === "flag"
+              ? await prisma.prediction.count({
+                  where: {
+                    smartColumnVersionId: active.id,
+                    status: PredictionStatus.SUCCESS,
+                    confidence: { lt: settings.confidenceThreshold },
+                    OR: [{ review: null }, { review: { status: ReviewStatus.NOT_REVIEWED } }],
+                  },
+                })
+              : 0;
+          return { ...sc, needsReview, reviewThreshold: settings.confidenceThreshold };
+        }),
+      ),
+    })),
+  );
+  return NextResponse.json({ datasets: withCounts });
 });
 
 const confirmSchema = z.object({
@@ -22,6 +57,8 @@ const confirmSchema = z.object({
   storageKey: z.string().min(1),
   filename: z.string().min(1),
   format: z.nativeEnum(DatasetFormat),
+  // XLSX only — which workbook sheet to import (defaults to the first non-empty one).
+  sheet: z.string().min(1).optional(),
   columns: z
     .array(
       z.object({
@@ -44,13 +81,21 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
 
   const buffer = await storage.get(body.storageKey);
-  const parsed = parseDataset(buffer, body.format);
+  const parsed = parseDataset(buffer, body.format, { sheet: body.sheet });
+
+  // Importing several sheets of one workbook would otherwise yield datasets
+  // with identical names — tag the sheet in, keeping the extension last so
+  // export filenames ("<base>_augmented.csv") still derive cleanly.
+  const filename =
+    parsed.sheets && parsed.sheets.length > 1 && parsed.sheet
+      ? body.filename.replace(/(\.[^.]+)?$/, (ext) => ` (${parsed.sheet})${ext}`)
+      : body.filename;
 
   const dataset = await prisma.$transaction(async (tx) => {
     const created = await tx.dataset.create({
       data: {
         workspaceId: body.workspaceId,
-        filename: body.filename,
+        filename,
         originalFormat: body.format,
         rowCount: parsed.rowCount,
         columnCount: parsed.columnCount,
@@ -78,6 +123,18 @@ export const POST = withErrorHandling(async (req: Request) => {
         data: chunk.map((data, j) => ({ datasetId: created.id, rowIndex: i + j, data: data as Prisma.InputJsonValue })),
       });
     }
+
+    await logActivity(
+      {
+        workspaceId: body.workspaceId,
+        category: "datasets",
+        action: "dataset.imported",
+        summary: `Imported “${filename}” — ${plural(parsed.rowCount, "row")}, ${plural(parsed.columnCount, "column")}`,
+        dataset: { id: created.id, name: filename },
+        metadata: { format: body.format, rowCount: parsed.rowCount, columnCount: parsed.columnCount, ...(parsed.sheet && { sheet: parsed.sheet }) },
+      },
+      tx,
+    );
 
     return created;
   }, { timeout: 60_000 });

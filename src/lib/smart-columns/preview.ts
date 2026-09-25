@@ -1,4 +1,5 @@
 import type { SmartColumnType } from "@/generated/prisma/client";
+import type { ModelProviderId, SmartColumnSettings } from "@/lib/decision-models/catalog";
 import type { DecisionResult } from "@/lib/decision-models/types";
 import { buildSourceState } from "@/lib/decision-models/normalize";
 import { runSmartColumnOnRow } from "./run";
@@ -17,6 +18,9 @@ export interface PreviewParams {
   labels: unknown;
   sourceColumns: string[];
   rows: { id: string; rowIndex: number; data: Record<string, unknown> }[];
+  modelProvider?: ModelProviderId;
+  modelIdentifier?: string;
+  settings?: Partial<SmartColumnSettings>;
 }
 
 /** FR-012/013 — runs a Smart Column on a small sample and returns enough to
@@ -31,6 +35,9 @@ export async function previewSmartColumn(params: PreviewParams): Promise<Preview
         labels: params.labels,
         sourceColumns: params.sourceColumns,
         row: row.data,
+        modelProvider: params.modelProvider,
+        modelIdentifier: params.modelIdentifier,
+        settings: params.settings,
       });
       const { text } = buildSourceState(row.data, params.sourceColumns);
       return { rowId: row.id, rowIndex: row.rowIndex, sourceText: text, result };

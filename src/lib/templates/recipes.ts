@@ -1,9 +1,14 @@
-import { SmartColumnType } from "@/generated/prisma/client";
+import { SmartColumnType } from "@/generated/prisma/browser";
 import type { SmartColumnConfig } from "@/types/smart-column";
+
+export type RecipeIcon = "zap" | "smile" | "route" | "tags" | "gauge" | "frown";
 
 interface BuiltInRecipe {
   name: string;
   description: string;
+  category: string;
+  tags: string[];
+  icon: RecipeIcon;
   config: SmartColumnConfig;
 }
 
@@ -12,7 +17,10 @@ interface BuiltInRecipe {
 export const BUILT_IN_RECIPES: BuiltInRecipe[] = [
   {
     name: "Is this urgent?",
+    icon: "zap",
     description: "Flags records that convey time-sensitive urgency.",
+    category: "Classification",
+    tags: ["Binary", "Support", "Triage"],
     config: {
       name: "Is Urgent",
       type: SmartColumnType.BINARY,
@@ -24,7 +32,10 @@ export const BUILT_IN_RECIPES: BuiltInRecipe[] = [
   },
   {
     name: "Customer sentiment",
+    icon: "smile",
     description: "Classifies the overall sentiment expressed in free text.",
+    category: "Classification",
+    tags: ["NLP", "Sentiment", "CX"],
     config: {
       name: "Sentiment",
       type: SmartColumnType.CATEGORICAL,
@@ -36,7 +47,10 @@ export const BUILT_IN_RECIPES: BuiltInRecipe[] = [
   },
   {
     name: "Support ticket department",
+    icon: "route",
     description: "Routes a support ticket to the team best suited to handle it.",
+    category: "Classification",
+    tags: ["Routing", "Support", "Ops"],
     config: {
       name: "Department",
       type: SmartColumnType.CATEGORICAL,
@@ -52,37 +66,47 @@ export const BUILT_IN_RECIPES: BuiltInRecipe[] = [
     },
   },
   {
-    name: "Crash / incident type",
-    description: "Classifies the primary cause described in an incident report.",
+    name: "Content type",
+    icon: "tags",
+    description: "Sorts free-text entries into what kind of message they are.",
+    category: "Classification",
+    tags: ["Text", "Triage", "General"],
     config: {
-      name: "Crash Type",
+      name: "Content Type",
       type: SmartColumnType.CATEGORICAL,
-      question: "What was the primary type of crash or incident described?",
+      question: "What kind of message is this?",
       instructions: "",
       labels: {
-        motor_vehicle: "Involves a car, truck, van, or motorcycle",
-        single_scooter: "Involves only a scooter or bicycle, no other vehicle",
-        pedestrian: "A pedestrian was struck",
+        question: "Asks for information or help",
+        complaint: "Reports a problem or expresses dissatisfaction",
+        request: "Asks for something to be done or changed",
+        feedback: "Shares an opinion, idea or praise",
         other: null,
       },
-      sourceColumns: ["title", "narrative", "description"],
+      sourceColumns: ["text", "message", "description", "body"],
     },
   },
   {
-    name: "Severity rating",
-    description: "Rates the severity described in a report on an ordered scale.",
+    name: "Priority level",
+    icon: "gauge",
+    description: "Rates how much attention an item needs, on an ordered scale.",
+    category: "Scoring",
+    tags: ["Rating", "Ops", "Triage"],
     config: {
-      name: "Severity",
+      name: "Priority",
       type: SmartColumnType.RATING,
-      question: "How severe is the outcome described?",
+      question: "How much priority should this item get?",
       instructions: "",
-      labels: ["None", "Low", "Moderate", "High", "Very High"],
-      sourceColumns: ["description", "narrative", "notes"],
+      labels: ["Can wait", "Low", "Medium", "High", "Drop everything"],
+      sourceColumns: ["description", "text", "notes"],
     },
   },
   {
     name: "Customer frustration level",
+    icon: "frown",
     description: "Rates how frustrated the customer sounds, on an ordered scale.",
+    category: "Scoring",
+    tags: ["Rating", "CX", "Support"],
     config: {
       name: "Frustration",
       type: SmartColumnType.RATING,
@@ -93,3 +117,9 @@ export const BUILT_IN_RECIPES: BuiltInRecipe[] = [
     },
   },
 ];
+
+// Icons aren't persisted on Template rows — this maps a built-in recipe's
+// name back to its icon for display, since the DB copy doesn't carry it.
+export const RECIPE_ICON_BY_NAME: Record<string, RecipeIcon> = Object.fromEntries(
+  BUILT_IN_RECIPES.map((r) => [r.name, r.icon]),
+);

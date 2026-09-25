@@ -41,6 +41,9 @@ export const POST = withErrorHandling(async (req: Request) => {
     instructions: body.config.instructions,
     labels: body.config.labels,
     sourceColumns: body.config.sourceColumns,
+    modelProvider: body.config.modelProvider,
+    modelIdentifier: body.config.modelIdentifier,
+    settings: body.config.settings,
     rows: rows.map((r) => ({ id: r.id, rowIndex: r.rowIndex, data: r.data as Record<string, unknown> })),
   });
 

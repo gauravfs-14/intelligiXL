@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity/log";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getDefaultUserId } from "@/lib/current-user";
@@ -35,5 +36,6 @@ export const POST = withErrorHandling(async (req: Request) => {
   const workspace = await prisma.workspace.create({
     data: { ownerId, name: body.name, description: body.description },
   });
+  await logActivity({ workspaceId: workspace.id, category: "workspace", action: "workspace.created", summary: `Created workspace “${workspace.name}”` });
   return NextResponse.json({ workspace }, { status: 201 });
 });

@@ -87,6 +87,22 @@ enum ExportFormat {
   XLSX
 }
 
+// One entry per data-mutating action (not per AI generation run — those are
+// Job/logs). A dataset-scoped linear undo/redo stack: `undone` marks entries
+// that have been undone, ordered by createdAt within a dataset. Undoing pops
+// the newest `undone: false` entry; redoing pops the newest `undone: true`
+// one; any *new* action first deletes every `undone: true` entry for that
+// dataset (the classic "redo stack is invalidated by a fresh edit" rule).
+enum ChangeLogAction {
+  CELL_EDIT
+  ROW_INSERT
+  ROW_DELETE
+  COLUMN_INSERT
+  COLUMN_DELETE
+  COLUMN_RENAME
+  COLUMN_DUPLICATE
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -107,9 +123,14 @@ model Workspace {
   owner       User     @relation(fields: [ownerId], references: [id])
   name        String
   description String?
+  // Which activity-log categories this workspace records, as
+  // { [category]: boolean } — see src/lib/activity/categories.ts. null or a
+  // missing key = that category's default (on).
+  activitySettings Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  activityLogs ActivityLog[]
   datasets     Dataset[]
   smartColumns SmartColumn[]
   jobs         Job[]
@@ -138,8 +159,26 @@ model Dataset {
   smartColumns SmartColumn[]
   exports      ExportRecord[]
   jobs         Job[]
+  changeLogs   DatasetChangeLog[]
 
   @@index([workspaceId])
+}
+
+// Enough of a before/after snapshot per action to invert or replay it —
+// see ChangeLogAction. `before`/`after` shapes are action-specific (see
+// src/lib/change-log.ts), not modeled in SQL since they're never queried on.
+model DatasetChangeLog {
+  id        String          @id @default(cuid())
+  datasetId String
+  dataset   Dataset         @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  action    ChangeLogAction
+  summary   String
+  before    Json?
+  after     Json?
+  undone    Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  @@index([datasetId, createdAt])
 }
 
 model DatasetColumn {
@@ -204,6 +243,9 @@ model SmartColumnVersion {
   unclearEnabled  Boolean  @default(false)
   modelProvider   String   @default("typesafe")
   modelIdentifier String   @default("jev-latest")
+  // Per-run settings (confidence threshold, concurrency, timeout, retries),
+  // see src/lib/decision-models/catalog.ts. null = defaults.
+  settings        Json?
   createdAt       DateTime @default(now())
 
   predictions Prediction[]
@@ -279,6 +321,9 @@ model Job {
   smartColumnVersionId String?
   smartColumnVersion   SmartColumnVersion? @relation(fields: [smartColumnVersionId], references: [id], onDelete: Cascade)
   errorLog             Json?
+  // Ring-buffered, timestamped run log for the Logs view — [{ ts, level, message }],
+  // capped in-process to the most recent entries (see runGenerationJob).
+  logs                 Json?
   createdAt            DateTime  @default(now())
   finishedAt           DateTime?
 
@@ -297,6 +342,9 @@ model Template {
   // Reusable SmartColumn definition: { type, question, instructions, labels, sourceColumnHints }
   config      Json
   isBuiltIn   Boolean  @default(false)
+  category    String?
+  tags        String[] @default([])
+  usageCount  Int      @default(0)
   createdAt   DateTime @default(now())
 
   @@index([workspaceId])
@@ -325,4 +373,33 @@ model ExportRecord {
   createdAt   DateTime     @default(now())
 
   @@index([workspaceId])
+}
+
+// Workspace-scoped audit trail of user actions (never navigation) — see
+// src/lib/activity. `datasetId` deliberately has no FK and `datasetName` is
+// copied in, so an entry still reads correctly after its dataset is deleted.
+model ActivityLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category    String
+  action      String
+  summary     String
+  datasetId   String?
+  datasetName String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, category, createdAt])
+}
+
+// App-wide configuration editable from the Settings page (API keys, provider
+// URLs). Environment variables with the same key always take precedence.
+// Secret values are AES-256-GCM encrypted (see src/lib/settings/crypto.ts).
+model AppSetting {
+  key       String   @id
+  value     String
+  encrypted Boolean  @default(false)
+  updatedAt DateTime @updatedAt
 }

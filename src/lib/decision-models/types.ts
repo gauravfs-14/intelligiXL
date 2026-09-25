@@ -51,9 +51,37 @@ export type DecisionResult = SuccessDecisionResult | FailedDecisionResult;
  * re-infer structure from prose (e.g. "Title" vs. "Article Text"). */
 export type DecisionInput = Record<string, string>;
 
+/** Per-call overrides. Omitted fields use the provider's defaults. */
+export interface DecisionOptions {
+  /** Provider-specific model id, e.g. "jev-1.13.0" or "llama3.1:8b". */
+  model?: string;
+  /** Per-attempt request timeout. */
+  timeoutMs?: number;
+  /** Retries after the initial attempt on retryable failures. */
+  maxRetries?: number;
+}
+
 export interface DecisionModel {
   /** A 2-option Choice: `yes` vs `no`, preserving the full distribution. */
-  binaryDecision(input: DecisionInput, question: string, labels: BinaryLabels, instructions?: string): Promise<DecisionResult>;
-  categoricalDecision(input: DecisionInput, question: string, labels: CategoricalLabels, instructions?: string): Promise<DecisionResult>;
-  ordinalDecision(input: DecisionInput, question: string, scale: RatingLabels, instructions?: string): Promise<DecisionResult>;
+  binaryDecision(
+    input: DecisionInput,
+    question: string,
+    labels: BinaryLabels,
+    instructions?: string,
+    options?: DecisionOptions,
+  ): Promise<DecisionResult>;
+  categoricalDecision(
+    input: DecisionInput,
+    question: string,
+    labels: CategoricalLabels,
+    instructions?: string,
+    options?: DecisionOptions,
+  ): Promise<DecisionResult>;
+  ordinalDecision(
+    input: DecisionInput,
+    question: string,
+    scale: RatingLabels,
+    instructions?: string,
+    options?: DecisionOptions,
+  ): Promise<DecisionResult>;
 }

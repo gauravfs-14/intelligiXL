@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { datasetRef, logActivity, plural } from "@/lib/activity/log";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ExportFormat } from "@/generated/prisma/client";
@@ -11,20 +12,31 @@ import { withErrorHandling } from "@/lib/api/respond";
 const logSchema = z.object({
   workspaceId: z.string().min(1),
   datasetId: z.string().min(1),
-  format: z.nativeEnum(ExportFormat),
+  // JSON downloads aren't an ExportRecord format, but they're still logged.
+  format: z.union([z.nativeEnum(ExportFormat), z.literal("JSON")]),
   fields: z.array(z.string()),
+  rowCount: z.number().int().nonnegative().optional(),
 });
 
 export const POST = withErrorHandling(async (req: Request) => {
   const body = logSchema.parse(await req.json());
-  const record = await prisma.exportRecord.create({
-    data: {
-      workspaceId: body.workspaceId,
-      datasetId: body.datasetId,
-      format: body.format,
-      fields: body.fields,
-      storageKey: "",
-    },
+  const format = body.format;
+  const record =
+    format === "JSON"
+      ? null
+      : await prisma.exportRecord.create({
+          data: { workspaceId: body.workspaceId, datasetId: body.datasetId, format, fields: body.fields, storageKey: "" },
+        });
+  const ref = await datasetRef(body.datasetId);
+  await logActivity({
+    workspaceId: body.workspaceId,
+    category: "exports",
+    action: "dataset.exported",
+    summary: `Exported ${ref ? `“${ref.dataset.name}”` : "a dataset"} as ${body.format === "XLSX" ? "Excel" : body.format}${
+      body.rowCount !== undefined ? ` — ${plural(body.rowCount, "row")}, ${plural(body.fields.length, "field")}` : ""
+    }`,
+    dataset: ref?.dataset ?? null,
+    metadata: { format: body.format, rowCount: body.rowCount ?? null, fields: body.fields.slice(0, 100) },
   });
   return NextResponse.json({ record }, { status: 201 });
 });

@@ -10,8 +10,19 @@ type Params = { params: Promise<{ id: string }> };
 // (<=10k rows, <=100 cols) this is simpler and faster than re-deriving
 // filter/sort state on the server for every view, and keeps all three
 // screens reading from one consistent in-memory snapshot.
-export const GET = withErrorHandling(async (_req: Request, { params }: Params) => {
+//
+// The Data Grid alone opts into pagination via `?page=&pageSize=` so a huge
+// dataset doesn't have to be pulled into the browser in one shot — Review,
+// Insights, and Export omit those params and keep getting the full snapshot,
+// since they genuinely need every row to compute correctly.
+export const GET = withErrorHandling(async (req: Request, { params }: Params) => {
   const { id } = await params;
+  const url = new URL(req.url);
+  const pageParam = url.searchParams.get("page");
+  const pageSizeParam = url.searchParams.get("pageSize");
+  const paginated = pageParam !== null || pageSizeParam !== null;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const pageSize = Math.min(2000, Math.max(1, Number(pageSizeParam) || 200));
 
   const dataset = await prisma.dataset.findUnique({
     where: { id },
@@ -19,8 +30,13 @@ export const GET = withErrorHandling(async (_req: Request, { params }: Params) =
   });
   if (!dataset) notFound("Dataset");
 
-  const [rows, smartColumns] = await Promise.all([
-    prisma.datasetRow.findMany({ where: { datasetId: id }, orderBy: { rowIndex: "asc" } }),
+  const [rows, totalRows, smartColumns] = await Promise.all([
+    prisma.datasetRow.findMany({
+      where: { datasetId: id },
+      orderBy: { rowIndex: "asc" },
+      ...(paginated ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
+    }),
+    paginated ? prisma.datasetRow.count({ where: { datasetId: id } }) : Promise.resolve(dataset.rowCount),
     prisma.smartColumn.findMany({
       where: { datasetId: id },
       orderBy: { createdAt: "asc" },
@@ -31,13 +47,17 @@ export const GET = withErrorHandling(async (_req: Request, { params }: Params) =
   const activeVersionIds = smartColumns.map((sc) => sc.activeVersionId).filter((v): v is string => Boolean(v));
 
   const predictions = await prisma.prediction.findMany({
-    where: { smartColumnVersionId: { in: activeVersionIds }, datasetRow: { datasetId: id } },
+    where: {
+      smartColumnVersionId: { in: activeVersionIds },
+      datasetRow: paginated ? { id: { in: rows.map((r) => r.id) } } : { datasetId: id },
+    },
     include: { review: true },
   });
 
   return NextResponse.json({
     dataset,
     rows,
+    ...(paginated ? { page, pageSize, totalRows } : {}),
     smartColumns: smartColumns.map((sc) => ({
       id: sc.id,
       workspaceId: sc.workspaceId,

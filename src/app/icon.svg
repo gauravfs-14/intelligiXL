@@ -1,0 +1,21 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aurora" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#C6F432"/>
+      <stop offset="100%" stop-color="#2EE6C8"/>
+    </linearGradient>
+  </defs>
+  <!-- Ink tile so the mark reads on both light and dark tab bars. -->
+  <rect width="256" height="256" rx="60" fill="#0E0E10"/>
+  <!-- Same geometry as src/components/logo.tsx (viewBox 0 -10 222 196), scaled to fit. -->
+  <g transform="translate(36 55) scale(0.83)">
+    <rect x="0" y="30" width="44" height="44" rx="10" fill="#F1F1EC"/>
+    <rect x="0" y="86" width="44" height="44" rx="10" fill="#F1F1EC"/>
+    <rect x="0" y="142" width="44" height="44" rx="10" fill="#F1F1EC"/>
+    <rect x="56" y="30" width="44" height="44" rx="22" fill="#C6F432"/>
+    <rect x="56" y="86" width="44" height="44" rx="10" fill="url(#aurora)" opacity="0.75"/>
+    <rect x="56" y="142" width="44" height="44" rx="10" fill="url(#aurora)" opacity="0.4"/>
+    <rect x="122" y="10" width="44" height="176" rx="22" fill="url(#aurora)"/>
+    <rect x="178" y="-10" width="44" height="196" rx="22" fill="url(#aurora)"/>
+  </g>
+</svg>

@@ -1,4 +1,5 @@
 import type { SmartColumnType } from "@/generated/prisma/browser";
+import type { ModelProviderId, SmartColumnSettings } from "@/lib/decision-models/catalog";
 import type { BinaryLabels, CategoricalLabels, RatingLabels } from "@/lib/decision-models/types";
 
 export type SmartColumnLabels = BinaryLabels | CategoricalLabels | RatingLabels;
@@ -14,4 +15,9 @@ export interface SmartColumnConfig {
   labels: SmartColumnLabels;
   sourceColumns: string[];
   unclearEnabled?: boolean;
+  /** Defaults to DEFAULT_MODEL_PROVIDER / DEFAULT_MODEL_IDENTIFIER. */
+  modelProvider?: ModelProviderId;
+  modelIdentifier?: string;
+  /** Partial overrides; missing fields fall back to DEFAULT_SMART_COLUMN_SETTINGS. */
+  settings?: Partial<SmartColumnSettings>;
 }

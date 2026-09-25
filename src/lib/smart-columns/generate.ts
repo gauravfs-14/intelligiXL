@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { JobStatus, JobType, PredictionStatus } from "@/generated/prisma/client";
 import { asyncPool } from "@/lib/utils/async-pool";
+import { PREDICTION_ERROR_LABEL } from "@/lib/prediction-error-labels";
+import { isLowConfidence, resolveSettings } from "@/lib/decision-models/catalog";
+import { JobLogger } from "./job-log";
+import { logActivity, plural } from "@/lib/activity/log";
 import { decisionResultToPredictionData, runSmartColumnOnRow } from "./run";
 
-const CONCURRENCY = 6;
 const CANCEL_CHECK_EVERY = 20;
+const CHECKPOINT_EVERY = 25;
 
 /** Executes a queued Smart Column generation or retry job row-by-row with
  * bounded concurrency, fault isolation per row (NFR-004), and cooperative
@@ -13,19 +17,33 @@ const CANCEL_CHECK_EVERY = 20;
 export async function runGenerationJob(jobId: string): Promise<void> {
   const job = await prisma.job.findUniqueOrThrow({
     where: { id: jobId },
-    include: { smartColumnVersion: { include: { smartColumn: true } } },
+    include: { smartColumnVersion: { include: { smartColumn: true } }, workspace: { include: { owner: true } } },
   });
 
+  const log = new JobLogger();
+
   if (!job.datasetId || !job.smartColumnVersion) {
+    log.add("error", "Job is missing its dataset or Smart Column version.");
     await prisma.job.update({
       where: { id: jobId },
-      data: { status: JobStatus.FAILED, finishedAt: new Date(), errorLog: { message: "Job is missing its dataset or Smart Column version." } },
+      data: {
+        status: JobStatus.FAILED,
+        finishedAt: new Date(),
+        errorLog: { message: "Job is missing its dataset or Smart Column version." },
+        logs: log.toJson(),
+      },
     });
     return;
   }
 
   const version = job.smartColumnVersion;
-  await prisma.job.update({ where: { id: jobId }, data: { status: JobStatus.RUNNING } });
+  const settings = resolveSettings(version.settings);
+  log.add("info", `Run started by ${job.workspace.owner.email}`);
+  log.add(
+    "info",
+    `Model: ${version.modelIdentifier} (${version.modelProvider}) · threshold ${Math.round(settings.confidenceThreshold * 100)}%${settings.lowConfidenceAction === "none" ? " (flagging off)" : ""} · concurrency ${settings.concurrency} · timeout ${Math.round(settings.timeoutMs / 1000)}s · ${settings.maxRetries} retr${settings.maxRetries === 1 ? "y" : "ies"}`,
+  );
+  await prisma.job.update({ where: { id: jobId }, data: { status: JobStatus.RUNNING, logs: log.toJson() } });
 
   const rows =
     job.jobType === JobType.SMART_COLUMN_RETRY
@@ -38,17 +56,33 @@ export async function runGenerationJob(jobId: string): Promise<void> {
         })
       : await prisma.datasetRow.findMany({ where: { datasetId: job.datasetId }, orderBy: { rowIndex: "asc" } });
 
+  log.add("info", `Processing ${rows.length.toLocaleString()} row(s) with concurrency ${settings.concurrency}`);
+
   let completed = 0;
   let failed = 0;
   let cancelled = false;
   let sinceCancelCheck = 0;
   let sinceFlush = 0;
+  let sinceCheckpoint = 0;
+  const startedAt = Date.now();
 
   async function flushProgress(force = false) {
     sinceFlush += 1;
-    if (!force && sinceFlush < 3) return;
+    // Flush every row (not just every 3rd) now that each row gets its own
+    // log line — a per-request log otherwise lags a couple of requests
+    // behind what the Jobs panel polls for.
+    if (!force && sinceFlush < 1) return;
     sinceFlush = 0;
-    await prisma.job.update({ where: { id: jobId }, data: { completedItems: completed, failedItems: failed } });
+    await prisma.job.update({ where: { id: jobId }, data: { completedItems: completed, failedItems: failed, logs: log.toJson() } });
+  }
+
+  function maybeCheckpoint() {
+    sinceCheckpoint += 1;
+    if (sinceCheckpoint < CHECKPOINT_EVERY) return;
+    sinceCheckpoint = 0;
+    const elapsedSec = Math.max(1, (Date.now() - startedAt) / 1000);
+    const rate = ((completed + failed) / elapsedSec).toFixed(1);
+    log.add("info", `Checkpoint — ${(completed + failed).toLocaleString()}/${rows.length.toLocaleString()} processed (${failed} flagged/failed) · ${rate} rows/s`);
   }
 
   async function processRow(row: (typeof rows)[number]) {
@@ -72,6 +106,9 @@ export async function runGenerationJob(jobId: string): Promise<void> {
       labels: version.labels,
       sourceColumns: version.sourceColumns,
       row: row.data as Record<string, unknown>,
+      modelProvider: version.modelProvider,
+      modelIdentifier: version.modelIdentifier,
+      settings,
     });
     const data = decisionResultToPredictionData(result);
 
@@ -81,9 +118,22 @@ export async function runGenerationJob(jobId: string): Promise<void> {
       update: { jobId, ...data },
     });
 
-    if (data.status === PredictionStatus.FAILED) failed += 1;
-    else completed += 1;
+    if (data.status === PredictionStatus.FAILED) {
+      failed += 1;
+      log.add("error", `Row ${row.rowIndex + 1}: ${PREDICTION_ERROR_LABEL[data.errorReason ?? "UNKNOWN"]} — will retry`);
+    } else {
+      completed += 1;
+      // No batching here — each row is its own Jev request, so every
+      // request gets its own timestamped line, not just the flagged ones.
+      const pct = data.confidence !== null && data.confidence !== undefined ? Math.round(data.confidence * 100) : null;
+      const flagged = isLowConfidence(data.confidence, settings);
+      log.add(
+        flagged ? "warning" : "info",
+        `Row ${row.rowIndex + 1}: ${data.predictedLabel ?? "—"}${pct !== null ? ` (${pct}%)` : ""}${flagged ? " — flagged" : ""}`,
+      );
+    }
 
+    maybeCheckpoint();
     await flushProgress();
 
     sinceCancelCheck += 1;
@@ -94,7 +144,7 @@ export async function runGenerationJob(jobId: string): Promise<void> {
     }
   }
 
-  await asyncPool(CONCURRENCY, rows, processRow);
+  await asyncPool(settings.concurrency, rows, processRow);
 
   // Re-check right before the final write: cancellation may have been
   // requested after the last in-loop poll but before the pool drained.
@@ -103,6 +153,13 @@ export async function runGenerationJob(jobId: string): Promise<void> {
     if (fresh?.status === JobStatus.CANCELLED) cancelled = true;
   }
 
+  log.add(
+    cancelled ? "warning" : "success",
+    cancelled
+      ? `Run cancelled — ${(completed + failed).toLocaleString()}/${rows.length.toLocaleString()} processed`
+      : `Run complete — ${completed.toLocaleString()} ok, ${failed.toLocaleString()} flagged/failed`,
+  );
+
   await prisma.job.update({
     where: { id: jobId },
     data: {
@@ -110,6 +167,20 @@ export async function runGenerationJob(jobId: string): Promise<void> {
       completedItems: completed,
       failedItems: failed,
       finishedAt: new Date(),
+      logs: log.toJson(),
     },
   });
+
+  // A user-initiated cancel is already logged by the cancel route.
+  if (!cancelled) {
+    const dataset = await prisma.dataset.findUnique({ where: { id: job.datasetId }, select: { id: true, filename: true } });
+    await logActivity({
+      workspaceId: job.workspaceId,
+      category: "generation",
+      action: "generation.completed",
+      summary: `Finished ${job.jobType === JobType.SMART_COLUMN_RETRY ? "retrying" : "generating"} “${version.smartColumn.name}” — ${plural(completed, "row")} ok, ${failed.toLocaleString()} flagged/failed`,
+      dataset: dataset ? { id: dataset.id, name: dataset.filename } : null,
+      metadata: { jobId, completed, failed },
+    });
+  }
 }

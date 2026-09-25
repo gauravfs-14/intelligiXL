@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { WorkspaceNav } from "@/components/workspace/workspace-nav";
+import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { DatasetProvider } from "@/components/workspace/dataset-context";
 
 export default async function WorkspaceLayout({ children, params }: LayoutProps<"/w/[workspaceId]">) {
@@ -10,10 +10,9 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
 
   return (
     <DatasetProvider workspaceId={workspaceId}>
-      <div className="flex min-h-screen flex-col">
-        <WorkspaceNav workspaceId={workspaceId} workspaceName={workspace.name} />
-        <main className="flex-1">{children}</main>
-      </div>
+      <WorkspaceShell workspaceId={workspaceId} workspaceName={workspace.name}>
+        {children}
+      </WorkspaceShell>
     </DatasetProvider>
   );
 }

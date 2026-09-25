@@ -8,6 +8,7 @@ import type {
   SmartColumnType,
 } from "@/generated/prisma/browser";
 import type { SmartColumnLabels } from "@/types/smart-column";
+import type { SmartColumnSettings } from "@/lib/decision-models/catalog";
 
 // Hand-written client-side DTOs (not the raw Prisma model types): API
 // responses serialize Date -> ISO string over JSON, so these mirror what
@@ -52,6 +53,9 @@ export interface SmartColumnVersionDto {
   unclearEnabled: boolean;
   modelProvider: string;
   modelIdentifier: string;
+  /** null for versions created before run settings existed — pass through
+   * resolveSettings() to get the effective values. */
+  settings: Partial<SmartColumnSettings> | null;
   createdAt: string;
 }
 
@@ -99,4 +103,8 @@ export interface WorkbenchResponse {
   rows: DatasetRowDto[];
   smartColumns: WorkbenchSmartColumnDto[];
   predictions: PredictionDto[];
+  // Present only when the request opted into pagination (`?page=&pageSize=`).
+  page?: number;
+  pageSize?: number;
+  totalRows?: number;
 }

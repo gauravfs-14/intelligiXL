@@ -3,6 +3,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 declare global {
   var __prisma: PrismaClient | undefined;
+  var __prismaCtor: typeof PrismaClient | undefined;
 }
 
 function createClient() {
@@ -10,8 +11,16 @@ function createClient() {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalThis.__prisma ?? createClient();
+// In dev the client is cached on globalThis to survive hot reloads — but a
+// `prisma generate` (new migration) reloads the generated module, and the
+// cached client would silently lack the new models. Rebuild when the class
+// itself changed.
+const cached = globalThis.__prismaCtor === PrismaClient ? globalThis.__prisma : undefined;
+if (!cached && globalThis.__prisma) void globalThis.__prisma.$disconnect().catch(() => undefined);
+
+export const prisma = cached ?? createClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.__prisma = prisma;
+  globalThis.__prismaCtor = PrismaClient;
 }

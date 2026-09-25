@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity/log";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
@@ -11,16 +12,27 @@ export const GET = withErrorHandling(async (req: Request) => {
   const workspaceId = new URL(req.url).searchParams.get("workspaceId");
   if (!workspaceId) throw new ApiError(422, "workspaceId is required.");
 
-  const builtInCount = await prisma.template.count({ where: { isBuiltIn: true } });
-  if (builtInCount === 0) {
-    await prisma.template.createMany({
-      data: BUILT_IN_RECIPES.map((r) => ({
-        name: r.name,
-        description: r.description,
-        config: r.config as unknown as Prisma.InputJsonValue,
-        isBuiltIn: true,
-      })),
-    });
+  const existingBuiltIns = await prisma.template.findMany({ where: { isBuiltIn: true } });
+  const byName = new Map(existingBuiltIns.map((t) => [t.name, t]));
+  // Built-ins retired from the recipe source (e.g. renamed) shouldn't linger
+  // in the gallery. Workspace-saved templates are never touched.
+  const recipeNames = new Set(BUILT_IN_RECIPES.map((r) => r.name));
+  const retired = existingBuiltIns.filter((t) => !recipeNames.has(t.name)).map((t) => t.id);
+  if (retired.length) await prisma.template.deleteMany({ where: { id: { in: retired }, isBuiltIn: true } });
+  for (const r of BUILT_IN_RECIPES) {
+    const found = byName.get(r.name);
+    const data = {
+      description: r.description,
+      category: r.category,
+      tags: r.tags,
+      config: r.config as unknown as Prisma.InputJsonValue,
+    };
+    if (!found) {
+      await prisma.template.create({ data: { ...data, name: r.name, isBuiltIn: true } });
+    } else if (found.category !== r.category || found.description !== r.description) {
+      // Keep seeded built-ins in sync with recipe source (category/tags added later, etc.).
+      await prisma.template.update({ where: { id: found.id }, data });
+    }
   }
 
   const templates = await prisma.template.findMany({
@@ -47,7 +59,15 @@ export const POST = withErrorHandling(async (req: Request) => {
       description: body.description,
       config: body.config as Prisma.InputJsonValue,
       isBuiltIn: false,
+      category: "Custom",
     },
+  });
+  await logActivity({
+    workspaceId: body.workspaceId,
+    category: "templates",
+    action: "template.created",
+    summary: `Saved template “${body.name}”`,
+    metadata: { templateId: template.id },
   });
   return NextResponse.json({ template }, { status: 201 });
 });

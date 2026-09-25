@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getDefaultUserId } from "@/lib/current-user";
 
 export default async function RootPage() {
+  // Request-time only: without this, `next build` prerenders the page, which
+  // needs a database at build time and bakes in a fixed redirect.
+  await connection();
   const ownerId = await getDefaultUserId();
   const workspaces = await prisma.workspace.findMany({ where: { ownerId }, orderBy: { updatedAt: "desc" } });
 

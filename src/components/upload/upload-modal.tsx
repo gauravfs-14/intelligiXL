@@ -7,6 +7,7 @@ import { UploadCloud, FileSpreadsheet, AlertTriangle, Check } from "lucide-react
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InlineSpinner } from "@/components/ui/states";
 import { useConfirmDataset, useUploadDataset, type UploadPreview } from "@/hooks/use-datasets";
 import { useDatasetContext } from "@/components/workspace/dataset-context";
@@ -40,6 +41,19 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
     }
   }
 
+  // Re-previews the already-staged workbook — no re-upload. On failure (e.g.
+  // an empty sheet) the current preview stays, so the user can pick again.
+  async function handleSheetChange(sheet: string) {
+    if (!preview || sheet === preview.sheet) return;
+    try {
+      const result = await upload.mutateAsync({ workspaceId, storageKey: preview.storageKey, filename: preview.filename, sheet });
+      setPreview(result);
+      setSourceOverrides(Object.fromEntries(result.columns.map((c) => [c.name, true])));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not read that sheet.");
+    }
+  }
+
   async function handleConfirm() {
     if (!preview) return;
     try {
@@ -48,9 +62,11 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
         storageKey: preview.storageKey,
         filename: preview.filename,
         format: preview.format,
+        sheet: preview.sheet,
         columns: preview.columns.map((c) => ({ ...c, isSource: sourceOverrides[c.name] ?? true })),
       });
-      toast.success(`"${preview.filename}" imported — ${preview.rowCount.toLocaleString()} rows.`);
+      const source = preview.sheets && preview.sheets.length > 1 ? `"${preview.filename}" (${preview.sheet})` : `"${preview.filename}"`;
+      toast.success(`${source} imported — ${preview.rowCount.toLocaleString()} rows.`);
       setDatasetId(dataset.id);
       onOpenChange(false);
       reset();
@@ -123,10 +139,34 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
             <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
               <FileSpreadsheet className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">{preview.filename}</span>
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                {upload.isPending && <InlineSpinner className="h-3.5 w-3.5" />}
                 {preview.rowCount.toLocaleString()} rows · {preview.columnCount} columns
               </span>
             </div>
+
+            {preview.sheets && preview.sheets.length > 1 && (
+              <div className="flex items-center gap-3">
+                <label htmlFor="upload-sheet" className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sheet
+                </label>
+                <Select value={preview.sheet} onValueChange={handleSheetChange} disabled={upload.isPending || confirm.isPending}>
+                  <SelectTrigger id="upload-sheet" className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preview.sheets.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">
+                  {preview.sheets.length} sheets in this workbook
+                </span>
+              </div>
+            )}
 
             {preview.warning && (
               <div className="flex items-start gap-2 border border-warning bg-warning-muted px-3 py-2 text-xs text-warning">
@@ -185,7 +225,7 @@ export function UploadModal({ workspaceId, open, onOpenChange }: { workspaceId: 
               <Button variant="ghost" onClick={reset}>
                 Choose a different file
               </Button>
-              <Button onClick={handleConfirm} loading={confirm.isPending}>
+              <Button onClick={handleConfirm} loading={confirm.isPending} disabled={upload.isPending}>
                 <Check className="h-4 w-4" /> Import {preview.rowCount.toLocaleString()} rows
               </Button>
             </div>

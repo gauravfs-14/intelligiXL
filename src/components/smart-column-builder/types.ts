@@ -1,4 +1,11 @@
 import { SmartColumnType } from "@/generated/prisma/browser";
+import {
+  DEFAULT_MODEL_IDENTIFIER,
+  DEFAULT_MODEL_PROVIDER,
+  DEFAULT_SMART_COLUMN_SETTINGS,
+  type ModelProviderId,
+  type SmartColumnSettings,
+} from "@/lib/decision-models/catalog";
 
 export interface CategoricalOption {
   key: string;
@@ -16,6 +23,9 @@ export interface BuilderState {
   categorical: CategoricalOption[];
   rating: string[];
   unclearEnabled: boolean;
+  modelProvider: ModelProviderId;
+  modelIdentifier: string;
+  settings: SmartColumnSettings;
 }
 
 export function emptyBuilderState(): BuilderState {
@@ -33,6 +43,9 @@ export function emptyBuilderState(): BuilderState {
     ],
     rating: ["", ""],
     unclearEnabled: false,
+    modelProvider: DEFAULT_MODEL_PROVIDER,
+    modelIdentifier: DEFAULT_MODEL_IDENTIFIER,
+    settings: { ...DEFAULT_SMART_COLUMN_SETTINGS },
   };
 }
 

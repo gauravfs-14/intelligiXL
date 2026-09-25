@@ -1,3 +1,14 @@
+# IntelligiXL services.
+#
+#   docker compose up -d postgres redis        # local dev infra (default, no profile)
+#   docker compose --profile app up -d --build # full stack: + app (web) + worker
+#   docker compose --profile laya up -d laya   # optional self-hosted Laya engine
+#
+# Host ports are configurable: POSTGRES_PORT, REDIS_PORT, APP_PORT, LAYA_PORT.
+# Volumes are intentionally declared WITHOUT `name:` so they stay scoped to the
+# compose project (e.g. intelligixl_intelligixl_postgres_data); running with a
+# different `-p <project>` gets its own, separate volumes.
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -7,7 +18,7 @@ services:
       POSTGRES_PASSWORD: intelligixl
       POSTGRES_DB: intelligixl
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - intelligixl_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +31,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - intelligixl_redis_data:/data
     healthcheck:
@@ -29,6 +40,100 @@ services:
       timeout: 5s
       retries: 10
 
+  # --- full stack (profile: app) -------------------------------------------
+  # app and worker share the same image and the same /app/.data volume: it holds
+  # uploaded datasets, exports and the auto-generated `.data/app-secret` used to
+  # decrypt settings stored in the DB. Set APP_SECRET to pin that key instead.
+  app:
+    profiles: ["app"]
+    build: .
+    image: intelligixl:latest
+    command: ["web"]
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment: &app-env
+      DATABASE_URL: postgresql://intelligixl:intelligixl@postgres:5432/intelligixl?schema=public
+      REDIS_URL: redis://redis:6379
+      LOCAL_STORAGE_DIR: /app/.data/storage
+      APP_SECRET: ${APP_SECRET:-}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      # Deliberately NOT ${LAYA_BASE_URL}: a dev .env usually has
+      # http://localhost:8000, which inside a container points at itself, and
+      # an env var would lock the Settings page. Leave empty and set the URL on
+      # the Settings page, or set DOCKER_LAYA_BASE_URL:
+      #   compose laya service   http://laya:8000
+      #   laya-serve on the host http://host.docker.internal:8000
+      LAYA_BASE_URL: ${DOCKER_LAYA_BASE_URL:-}
+      LAYA_API_KEY: ${LAYA_API_KEY:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - intelligixl_app_data:/app/.data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/',{redirect:'manual'}).then(r=>process.exit(r.status<500?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+
+  worker:
+    profiles: ["app"]
+    image: intelligixl:latest
+    pull_policy: never
+    command: ["worker"]
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment: *app-env
+    volumes:
+      - intelligixl_app_data:/app/.data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # app runs `prisma migrate deploy` on start; wait for it before processing jobs.
+      app:
+        condition: service_healthy
+
+  # --- optional self-hosted Laya engine (profile: laya) --------------------
+  # Reachable from app/worker at http://laya:8000 (set LAYA_BASE_URL to that,
+  # or via the in-app Settings page). Models download lazily into the
+  # intelligixl_laya_models volume on first request unless LAYA_PRELOAD=1.
+  laya:
+    profiles: ["laya"]
+    build: ./docker/laya
+    image: intelligixl-laya:latest
+    restart: unless-stopped
+    environment:
+      LAYA_HOST: 0.0.0.0
+      LAYA_PORT: "8000"
+      LAYA_DEVICE: ${LAYA_DEVICE:-cpu}
+      LAYA_PRELOAD: ${LAYA_PRELOAD:-0}
+      LAYA_MODELS: ${LAYA_MODELS:-}
+      LAYA_API_KEY: ${LAYA_API_KEY:-}
+      HF_HOME: /models
+    ports:
+      - "${LAYA_PORT:-8000}:8000"
+    volumes:
+      - intelligixl_laya_models:/models
+
 volumes:
   intelligixl_postgres_data:
   intelligixl_redis_data:
+  intelligixl_app_data:
+  intelligixl_laya_models:

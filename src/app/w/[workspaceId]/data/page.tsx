@@ -3,16 +3,31 @@
 import * as React from "react";
 import { use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { UploadCloud, Plus } from "lucide-react";
+import { UploadCloud, Download, Undo2, Redo2, Sparkles } from "lucide-react";
 import { useDatasetContext } from "@/components/workspace/dataset-context";
-import { useDatasets, useWorkbench } from "@/hooks/use-datasets";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import {
+  useAddColumn,
+  useCreateRows,
+  useDatasetChanges,
+  useDatasets,
+  useDeleteColumn,
+  useDeleteRows,
+  useDuplicateColumn,
+  useRedoChange,
+  useRenameColumn,
+  useUndoChange,
+  useUpdateRow,
+  useWorkbench,
+} from "@/hooks/use-datasets";
 import { useDeleteSmartColumn, useGenerateSmartColumn, useRetrySmartColumn } from "@/hooks/use-smart-columns";
+import { useUpsertReview } from "@/hooks/use-reviews";
 import { useTelemetry } from "@/hooks/use-telemetry";
 import { UploadModal } from "@/components/upload/upload-modal";
 import { DataGrid } from "@/components/data-grid/data-grid";
-import { JobProgressBanner } from "@/components/data-grid/job-progress-banner";
+import { DatasetSwitcher } from "@/components/workspace/dataset-switcher";
+import { JobBanners } from "@/components/data-grid/job-progress-banner";
 import { ExportModal } from "@/components/data-grid/export-modal";
 import { SmartColumnBuilderModal } from "@/components/smart-column-builder/builder-modal";
 import { ViewConfigModal } from "@/components/smart-column-builder/view-config-modal";
@@ -26,7 +41,11 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
   const searchParams = useSearchParams();
   const { datasetId } = useDatasetContext();
   const { data: datasetsData, isLoading: datasetsLoading } = useDatasets(workspaceId);
-  const { data: workbench, isLoading, isError, refetch } = useWorkbench(datasetId ?? undefined);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(200);
+  const { data: workbench, isLoading, isError, refetch } = useWorkbench(datasetId ?? undefined, { page, pageSize });
+  const [exportOpen, setExportOpen] = React.useState(false);
+  const { data: fullWorkbench, isLoading: fullWorkbenchLoading } = useWorkbench(datasetId ?? undefined, undefined, exportOpen);
   const track = useTelemetry(workspaceId);
 
   const [uploadOpen, setUploadOpen] = React.useState(searchParams.get("upload") === "1");
@@ -34,12 +53,24 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [templateSeed, setTemplateSeed] = React.useState<Partial<BuilderState> | null>(null);
   const [viewConfigId, setViewConfigId] = React.useState<string | null>(null);
-  const [exportOpen, setExportOpen] = React.useState(false);
-  const [activeJobs, setActiveJobs] = React.useState<{ jobId: string; name: string }[]>([]);
 
   const deleteSmartColumn = useDeleteSmartColumn(datasetId ?? "");
+  const confirm = useConfirm();
   const generate = useGenerateSmartColumn(datasetId ?? "");
   const retry = useRetrySmartColumn(datasetId ?? "");
+  const createRows = useCreateRows(datasetId ?? "");
+  const updateRow = useUpdateRow(datasetId ?? "");
+  const deleteRows = useDeleteRows(datasetId ?? "");
+  const addColumn = useAddColumn(datasetId ?? "");
+  const renameColumn = useRenameColumn(datasetId ?? "");
+  const duplicateColumn = useDuplicateColumn(datasetId ?? "");
+  const deleteColumn = useDeleteColumn(datasetId ?? "");
+  const upsertReview = useUpsertReview(datasetId ?? "");
+  const { data: changesData } = useDatasetChanges(datasetId ?? undefined);
+  const undoChange = useUndoChange(datasetId ?? "");
+  const redoChange = useRedoChange(datasetId ?? "");
+
+  React.useEffect(() => setPage(1), [datasetId]);
 
   React.useEffect(() => {
     try {
@@ -64,8 +95,57 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
     track("smart_column_started", {});
   }
 
+  const canUndo = changesData?.canUndo ?? false;
+  const canRedo = changesData?.canRedo ?? false;
+
+  const handleUndo = React.useCallback(async () => {
+    if (!datasetId || !changesData?.canUndo) return;
+    try {
+      await undoChange.mutateAsync();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Nothing to undo.");
+    }
+  }, [datasetId, changesData?.canUndo, undoChange]);
+
+  const handleRedo = React.useCallback(async () => {
+    if (!datasetId || !changesData?.canRedo) return;
+    try {
+      await redoChange.mutateAsync();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Nothing to redo.");
+    }
+  }, [datasetId, changesData?.canRedo, redoChange]);
+
+  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z (or Ctrl+Y) to redo — standard
+  // spreadsheet shortcuts, skipped while typing in a field so they don't
+  // fight with normal text-undo inside an input/textarea/contenteditable.
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key.toLowerCase() === "z" && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        handleUndo();
+      } else if (e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleRedo();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleUndo, handleRedo]);
+
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete Smart Column "${name}"? All predictions and reviews for it will be removed.`)) return;
+    const ok = await confirm({
+      title: `Delete Smart Column “${name}”?`,
+      details: ["Every version of its configuration", "All predictions and human reviews", "Its generation jobs and run logs"],
+      confirmLabel: "Delete column",
+    });
+    if (!ok) return;
     try {
       await deleteSmartColumn.mutateAsync(id);
       toast.success(`"${name}" deleted.`);
@@ -76,8 +156,7 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
 
   async function handleRegenerate(id: string, name: string) {
     try {
-      const { job } = await generate.mutateAsync(id);
-      setActiveJobs((jobs) => [...jobs, { jobId: job.id, name }]);
+      await generate.mutateAsync(id);
       toast.success(`Regenerating "${name}"…`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't start regeneration.");
@@ -86,8 +165,7 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
 
   async function handleRetryFailed(id: string, name: string) {
     try {
-      const { job } = await retry.mutateAsync(id);
-      setActiveJobs((jobs) => [...jobs, { jobId: job.id, name: `${name} (retry)` }]);
+      await retry.mutateAsync(id);
       toast.success(`Retrying failed rows for "${name}"…`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't retry.");
@@ -97,27 +175,17 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
   const hasDatasets = (datasetsData?.datasets.length ?? 0) > 0;
 
   return (
-    <div className="relative flex h-[calc(100vh-3.5rem)] flex-col">
-      <AnimatePresence>
-        {activeJobs.map((j) => (
-          <JobProgressBanner
-            key={j.jobId}
-            jobId={j.jobId}
-            name={j.name}
-            datasetId={datasetId ?? ""}
-            onDismiss={() => setActiveJobs((jobs) => jobs.filter((x) => x.jobId !== j.jobId))}
-          />
-        ))}
-      </AnimatePresence>
+    <div className="relative flex h-full flex-col">
+      <JobBanners workspaceId={workspaceId} currentDatasetId={datasetId} />
 
       {datasetsLoading && (
-        <div className="p-6">
+        <div className="mx-auto w-full max-w-6xl px-6 py-10 md:px-8">
           <TableSkeleton />
         </div>
       )}
 
       {!datasetsLoading && !hasDatasets && (
-        <div className="flex flex-1 items-center justify-center p-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 py-10 md:px-8">
           <EmptyState
             icon={UploadCloud}
             title="No datasets yet"
@@ -128,19 +196,19 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
       )}
 
       {!datasetsLoading && hasDatasets && !datasetId && (
-        <div className="flex flex-1 items-center justify-center p-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 py-10 md:px-8">
           <TableSkeleton />
         </div>
       )}
 
       {datasetId && isLoading && (
-        <div className="p-6">
+        <div className="mx-auto w-full max-w-6xl px-6 py-10 md:px-8">
           <TableSkeleton rows={12} cols={6} />
         </div>
       )}
 
       {datasetId && isError && (
-        <div className="p-6">
+        <div className="mx-auto w-full max-w-6xl px-6 py-10 md:px-8">
           <ErrorState description="Couldn't load this dataset." onRetry={() => refetch()} />
         </div>
       )}
@@ -152,12 +220,31 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
           )}
           <div className="flex-1 overflow-hidden">
             <DataGrid
+              toolbarLeading={<DatasetSwitcher workspaceId={workspaceId} />}
+              toolbarTrailing={
+                <>
+                  <Button variant="ghost" size="sm" onClick={handleUndo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">
+                    <Undo2 className="h-3.5 w-3.5" /> Undo
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleRedo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">
+                    <Redo2 className="h-3.5 w-3.5" /> Redo
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                    <Download className="h-3.5 w-3.5" /> Export
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ai"
+                    onClick={workbench.dataset.columns.length > 0 ? openBuilder : () => toast.error("This dataset has no columns.")}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Add Smart Column
+                  </Button>
+                </>
+              }
               columns={workbench.dataset.columns}
               rows={workbench.rows}
               smartColumns={workbench.smartColumns}
               predictions={workbench.predictions}
-              onAddSmartColumn={workbench.dataset.columns.length > 0 ? openBuilder : () => toast.error("This dataset has no columns.")}
-              onExport={() => setExportOpen(true)}
               onEditSmartColumn={(id) => {
                 setEditingId(id);
                 setBuilderOpen(true);
@@ -176,6 +263,89 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
                 if (sc) handleDelete(id, sc.name);
               }}
               onGoToReview={(id) => router.push(`/w/${workspaceId}/review?sc=${id}`)}
+              onUpdateCell={(rowId, columnName, value) => {
+                updateRow.mutate({ rowId, data: { [columnName]: value } }, { onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't save cell.") });
+              }}
+              onCorrectPrediction={(predictionId, value) =>
+                upsertReview.mutate(
+                  { predictionId, status: "CORRECTED", reviewedValue: value },
+                  {
+                    onSuccess: () => toast.success("Correction saved."),
+                    onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't save correction."),
+                  },
+                )
+              }
+              onInsertRow={(anchorRowId, position) =>
+                createRows.mutate(
+                  { anchorRowId, position },
+                  { onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't insert row.") },
+                )
+              }
+              onDuplicateRows={(rowIds) =>
+                createRows.mutate(
+                  { duplicateOf: rowIds },
+                  {
+                    onSuccess: (res) => toast.success(`Duplicated ${res.rows.length} row${res.rows.length > 1 ? "s" : ""}.`),
+                    onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't duplicate row(s)."),
+                  },
+                )
+              }
+              onDeleteRows={async (rowIds) => {
+                const n = rowIds.length;
+                const ok = await confirm({
+                  title: `Delete ${n} row${n > 1 ? "s" : ""}?`,
+                  description: n > 1 ? "These rows and their Smart Column predictions will be removed." : "This row and its Smart Column predictions will be removed.",
+                  note: "You can undo this with Undo (⌘Z / Ctrl+Z) or from the change log.",
+                  confirmLabel: `Delete row${n > 1 ? "s" : ""}`,
+                });
+                if (!ok) return;
+                deleteRows.mutate(rowIds, {
+                  onSuccess: (res) => toast.success(`Deleted ${res.deleted} row${res.deleted > 1 ? "s" : ""}.`),
+                  onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't delete row(s)."),
+                });
+              }}
+              onInsertColumn={(name, anchorColumnId, position) =>
+                addColumn.mutate(
+                  { name, anchorColumnId, position },
+                  {
+                    onSuccess: () => toast.success(`Column "${name}" added.`),
+                    onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't add column."),
+                  },
+                )
+              }
+              onRenameColumn={(columnId, name) =>
+                renameColumn.mutate({ columnId, name }, { onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't rename column.") })
+              }
+              onDuplicateColumn={(columnId) =>
+                duplicateColumn.mutate(columnId, {
+                  onSuccess: (res) => toast.success(`Added "${res.column.name}".`),
+                  onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't duplicate column."),
+                })
+              }
+              onDeleteColumn={async (columnId) => {
+                const name = workbench.dataset.columns.find((c) => c.id === columnId)?.name ?? "this column";
+                const ok = await confirm({
+                  title: `Delete column “${name}”?`,
+                  description: "Its values in every row will be removed. Smart Columns that use it as a source will treat it as empty on their next run.",
+                  note: "You can undo this with Undo (⌘Z / Ctrl+Z) or from the change log.",
+                  confirmLabel: "Delete column",
+                });
+                if (!ok) return;
+                deleteColumn.mutate(columnId, {
+                  onSuccess: () => toast.success(`Column “${name}” deleted.`),
+                  onError: (err) => toast.error(err instanceof Error ? err.message : "Couldn't delete column."),
+                });
+              }}
+              pagination={{
+                page,
+                pageSize,
+                totalRows: workbench.totalRows ?? workbench.rows.length,
+                onPageChange: setPage,
+                onPageSizeChange: (size) => {
+                  setPageSize(size);
+                  setPage(1);
+                },
+              }}
             />
           </div>
         </>
@@ -199,7 +369,6 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
             datasetColumns={workbench.dataset.columns}
             editing={editing}
             initialConfig={templateSeed}
-            onGenerated={(jobId, name) => setActiveJobs((jobs) => [...jobs, { jobId, name }])}
           />
           <ViewConfigModal
             smartColumn={viewConfigSmartColumn}
@@ -212,19 +381,12 @@ export default function DataPage({ params }: PageProps<"/w/[workspaceId]/data">)
             onOpenChange={setExportOpen}
             workspaceId={workspaceId}
             dataset={workbench.dataset}
-            rows={workbench.rows}
-            smartColumns={workbench.smartColumns}
-            predictionsByRow={buildPredictionsByRow(workbench)}
+            rows={fullWorkbench?.rows ?? []}
+            smartColumns={fullWorkbench?.smartColumns ?? workbench.smartColumns}
+            predictionsByRow={fullWorkbench ? buildPredictionsByRow(fullWorkbench) : new Map()}
+            loading={fullWorkbenchLoading || !fullWorkbench}
           />
         </>
-      )}
-
-      {hasDatasets && !builderOpen && datasetId && workbench && workbench.smartColumns.length === 0 && (
-        <div className="pointer-events-none absolute bottom-6 right-6">
-          <Button onClick={openBuilder} className="pointer-events-auto shadow-flat">
-            <Plus className="h-4 w-4" /> Add your first Smart Column
-          </Button>
-        </div>
       )}
     </div>
   );

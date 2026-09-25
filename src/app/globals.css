@@ -5,72 +5,90 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
- * IntelligiXL design language
- * A clean, modern instrument panel: one indigo brand color, soft elevation
- * on hover instead of heavy borders everywhere, no gradients, fluid motion.
- * Built on shadcn's token conventions (--primary/--accent/--destructive/…)
- * so generated shadcn components and hand-written ones share one palette.
+ * IntelligiXL design language — "signal"
+ * Ink and paper, one acid-lime signal color, and an aurora gradient
+ * (lime → cyan) reserved for anything the model produces, so "AI did this"
+ * is always legible at a glance. Display type is Bricolage Grotesque with
+ * Instrument Serif italics for accents; data stays in Geist Mono. Built on
+ * shadcn's token names so generated and hand-written components share one
+ * palette.
  * ------------------------------------------------------------------------ */
 
 :root {
-  --background: #fbfbfa;
-  --foreground: #131316;
-  --surface: #ffffff;
+  --background: #f6f5f0;
+  --foreground: #0e0e10;
+  --surface: #fdfdfb;
   --surface-raised: #ffffff;
 
   --card: var(--surface);
   --card-foreground: var(--foreground);
-  --popover: var(--surface);
+  --popover: var(--surface-raised);
   --popover-foreground: var(--foreground);
 
-  --muted: #f2f2f1;
-  --muted-foreground: #75757e;
-  --border: #e7e7e5;
-  --border-strong: #131316;
-  --input: #e2e2e0;
-  --ring: var(--primary);
+  --muted: #ecebe4;
+  --muted-foreground: #6b6a63;
+  --border: #e2e0d8;
+  --border-strong: #0e0e10;
+  --input: #dcdad1;
+  --ring: #6b8f00;
 
-  /* Brand — the one accent color, used for CTAs, focus, active/selected
-   * states, and anything explicitly "AI/Smart". */
-  --primary: #3654ff;
+  /* Text-safe brand green (olive-lime) for links, icons, selected states on
+   * paper; the bright lime lives in --signal and the CTA tokens. */
+  --primary: #4f7a00;
   --primary-foreground: #ffffff;
+  --primary-glow: #b8f02e;
 
-  /* Neutral hover/selected highlight (shadcn's own "accent" role) — kept
-   * distinct from --primary so hover states stay quiet, not floodlit. */
-  --accent: #eef0fb;
-  --accent-foreground: #1d2a70;
+  --signal: #c6f432;
+  --signal-foreground: #0e0e10;
+  --aurora-a: #b8f02e;
+  --aurora-b: #2ee6c8;
+  --aurora-c: #4ba8ff;
+  /* Darker stops for gradient *text* on paper, where the fill stops would
+   * wash out. */
+  --aurora-text-a: #5a8a00;
+  --aurora-text-b: #0f9488;
+  --aurora-text-c: #2563eb;
+
+  /* Primary call-to-action: ink pill on paper, lime pill in the dark. */
+  --cta: #0e0e10;
+  --cta-foreground: #f6ffe0;
+
+  --accent: #eef6d6;
+  --accent-foreground: #33500a;
 
   --secondary: var(--muted);
   --secondary-foreground: var(--foreground);
 
   --warning: #b45309;
   --warning-foreground: #ffffff;
-  --warning-muted: #fef3e2;
+  --warning-muted: #fbefd9;
 
-  --danger: #c81e3a;
+  --danger: #d0263f;
   --danger-foreground: #ffffff;
-  --danger-muted: #fdeaec;
+  --danger-muted: #fbe6e8;
   --destructive: var(--danger);
   --destructive-foreground: var(--danger-foreground);
 
-  --success: #0a7a55;
+  --success: #1f8a4c;
   --success-foreground: #ffffff;
-  --success-muted: #e6f5ef;
+  --success-muted: #e6f5ea;
 
-  --radius: 0.5rem;
-  --shadow-color: 16 17 19;
-  --shadow-flat: 0 1px 2px rgb(var(--shadow-color) / 0.04), 0 1px 1px rgb(var(--shadow-color) / 0.03);
-  --shadow-flat-sm: 0 1px 2px rgb(var(--shadow-color) / 0.05);
-  --shadow-float: 0 12px 32px -8px rgb(var(--shadow-color) / 0.18), 0 2px 8px -2px rgb(var(--shadow-color) / 0.08);
-  --shadow-hover: 0 6px 16px -4px rgb(var(--shadow-color) / 0.14), 0 2px 6px -2px rgb(var(--shadow-color) / 0.08);
+  --radius: 0.75rem;
+  --shadow-color: 40 38 20;
+  --shadow-flat: 0 1px 2px rgb(var(--shadow-color) / 0.05), 0 1px 1px rgb(var(--shadow-color) / 0.03);
+  --shadow-flat-sm: 0 1px 2px rgb(var(--shadow-color) / 0.06);
+  --shadow-float: 0 24px 48px -12px rgb(var(--shadow-color) / 0.22), 0 4px 12px -4px rgb(var(--shadow-color) / 0.08);
+  --shadow-hover: 0 10px 24px -8px rgb(var(--shadow-color) / 0.18), 0 2px 6px -2px rgb(var(--shadow-color) / 0.08);
+  --dot-color: rgb(14 14 16 / 0.07);
+  --grain-opacity: 0.035;
 
-  --chart-1: var(--primary);
-  --chart-2: #22a06b;
-  --chart-3: #d97706;
-  --chart-4: #8b5cf6;
-  --chart-5: #64748b;
+  --chart-1: #6b9a00;
+  --chart-2: #0ea5a0;
+  --chart-3: #3b82f6;
+  --chart-4: #f06a3a;
+  --chart-5: #d14fa0;
 
-  --sidebar: var(--surface);
+  --sidebar: color-mix(in oklab, var(--surface) 72%, transparent);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -81,59 +99,74 @@
 }
 
 .dark {
-  --background: #0a0a0c;
-  --foreground: #f2f2f0;
-  --surface: #131316;
-  --surface-raised: #18181c;
+  --background: #08080a;
+  --foreground: #f1f1ec;
+  --surface: #111114;
+  --surface-raised: #17171b;
 
   --card: var(--surface);
   --card-foreground: var(--foreground);
   --popover: var(--surface-raised);
   --popover-foreground: var(--foreground);
 
-  --muted: #1c1c20;
-  --muted-foreground: #8c8c96;
-  --border: #26262b;
-  --border-strong: #f2f2f0;
-  --input: #2a2a30;
-  --ring: var(--primary);
+  --muted: #1b1b20;
+  --muted-foreground: #8d8d96;
+  --border: #232329;
+  --border-strong: #f1f1ec;
+  --input: #2a2a31;
+  --ring: #c6f432;
 
-  --primary: #7189ff;
-  --primary-foreground: #0a0a0b;
+  --primary: #c6f432;
+  --primary-foreground: #0b0b0c;
+  --primary-glow: #dcff6b;
 
-  --accent: #171d3d;
-  --accent-foreground: #c3ccff;
+  --signal: #c6f432;
+  --signal-foreground: #0b0b0c;
+  --aurora-a: #c6f432;
+  --aurora-b: #34f0cf;
+  --aurora-c: #5eb4ff;
+  --aurora-text-a: var(--aurora-a);
+  --aurora-text-b: var(--aurora-b);
+  --aurora-text-c: var(--aurora-c);
+
+  --cta: #c6f432;
+  --cta-foreground: #0b0b0c;
+
+  --accent: #1d2410;
+  --accent-foreground: #dcff6b;
 
   --secondary: var(--muted);
   --secondary-foreground: var(--foreground);
 
-  --warning: #f4a339;
+  --warning: #ffb347;
   --warning-foreground: #0a0a0b;
-  --warning-muted: #3a2a0f;
+  --warning-muted: #33240c;
 
-  --danger: #ff6b7f;
+  --danger: #ff6b81;
   --danger-foreground: #0a0a0b;
   --danger-muted: #3a1420;
   --destructive: var(--danger);
   --destructive-foreground: var(--danger-foreground);
 
-  --success: #3ddba0;
+  --success: #5ee38f;
   --success-foreground: #0a0a0b;
-  --success-muted: #0f3327;
+  --success-muted: #10291a;
 
   --shadow-color: 0 0 0;
   --shadow-flat: 0 1px 2px rgb(var(--shadow-color) / 0.4);
   --shadow-flat-sm: 0 1px 2px rgb(var(--shadow-color) / 0.35);
-  --shadow-float: 0 16px 40px -8px rgb(var(--shadow-color) / 0.6), 0 2px 8px -2px rgb(var(--shadow-color) / 0.4);
-  --shadow-hover: 0 8px 20px -4px rgb(var(--shadow-color) / 0.5), 0 2px 6px -2px rgb(var(--shadow-color) / 0.4);
+  --shadow-float: 0 24px 60px -12px rgb(var(--shadow-color) / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-hover: 0 10px 28px -8px rgb(var(--shadow-color) / 0.6), 0 2px 6px -2px rgb(var(--shadow-color) / 0.4);
+  --dot-color: rgb(255 255 255 / 0.055);
+  --grain-opacity: 0.05;
 
-  --chart-1: var(--primary);
-  --chart-2: #34d399;
-  --chart-3: #fbbf24;
-  --chart-4: #a78bfa;
-  --chart-5: #94a3b8;
+  --chart-1: #c6f432;
+  --chart-2: #34f0cf;
+  --chart-3: #5eb4ff;
+  --chart-4: #ff8a5c;
+  --chart-5: #f472c6;
 
-  --sidebar: var(--surface);
+  --sidebar: color-mix(in oklab, var(--surface) 70%, transparent);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -162,6 +195,14 @@
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-cta: var(--cta);
+  --color-cta-foreground: var(--cta-foreground);
+  --color-aurora-a: var(--aurora-a);
+  --color-aurora-b: var(--aurora-b);
+  --color-aurora-c: var(--aurora-c);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-secondary: var(--secondary);
@@ -198,7 +239,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-bricolage), var(--font-geist-sans);
 
   --shadow-flat: var(--shadow-flat);
   --shadow-flat-sm: var(--shadow-flat-sm);
@@ -222,9 +263,35 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Backdrop: a faint dot grid (the "graph paper" of a data tool) with one
+ * aurora glow bleeding in from the top, plus film grain on top of
+ * everything so flat surfaces don't read as sterile. Both layers are fixed,
+ * non-interactive and behind/above content via z-index. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(52rem 26rem at 18% -12%, color-mix(in oklab, var(--aurora-a) 16%, transparent), transparent 70%),
+    radial-gradient(40rem 24rem at 92% -6%, color-mix(in oklab, var(--aurora-b) 11%, transparent), transparent 70%),
+    radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0) 0 0 / 22px 22px;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 ::selection {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
+  background: var(--color-signal);
+  color: var(--color-signal-foreground);
 }
 
 button,
@@ -285,4 +352,108 @@ textarea {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Signature utilities
+ * ------------------------------------------------------------------------ */
+
+@utility font-display {
+  font-family: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, system-ui;
+  letter-spacing: -0.035em;
+  font-variation-settings: "wdth" 92;
+}
+
+/* Serif italic accent for a word or two inside a display heading. */
+@utility font-accent {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* The AI gradient — text, fills and borders for anything model-produced. */
+@utility text-aurora {
+  background: linear-gradient(100deg, var(--aurora-text-a), var(--aurora-text-b) 55%, var(--aurora-text-c));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-aurora {
+  background: linear-gradient(115deg, var(--aurora-a), var(--aurora-b) 55%, var(--aurora-c));
+}
+
+/* A 1px aurora ring that follows the element's border-radius. */
+@utility ring-aurora {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(115deg, var(--aurora-a), var(--aurora-b) 55%, var(--aurora-c));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* Slow light sweep across AI buttons/chips. */
+@utility ai-sweep {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.45) 50%, transparent 65%);
+    transform: translateX(-100%);
+    animation: shimmer-sweep 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@utility grid-dots {
+  background-image: radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+@keyframes shimmer-sweep {
+  0%, 55% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes aurora-drift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+.animate-aurora {
+  background-size: 200% 200%;
+  animation: aurora-drift 8s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+kbd {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }

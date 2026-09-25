@@ -14,6 +14,10 @@ export function downloadCsv(rows: Record<string, unknown>[], filename: string) {
   triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), filename);
 }
 
+export function downloadJson(payload: unknown, filename: string) {
+  triggerDownload(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" }), filename);
+}
+
 // Generated server-side (see /api/exports/xlsx) — the `xlsx` package does
 // not bundle cleanly for the browser.
 export async function downloadXlsx(rows: Record<string, unknown>[], filename: string) {

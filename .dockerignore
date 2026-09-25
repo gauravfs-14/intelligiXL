@@ -1,0 +1,24 @@
+# Keep the build context small and free of secrets / host artifacts.
+.git
+.gitignore
+node_modules
+**/node_modules
+.next
+out
+build
+coverage
+.data
+.env
+.env.*
+!.env.example
+src/generated
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+.vercel
+.claude
+docker-compose*.yml
+Makefile
+docker/laya

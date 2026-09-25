@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { JobStatus, JobType } from "@/generated/prisma/client";
 import { getSmartColumnQueue } from "@/lib/queue/smart-column-queue";
 import { ApiError, withErrorHandling, notFound } from "@/lib/api/respond";
+import { logActivity, plural } from "@/lib/activity/log";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,6 +32,14 @@ export const POST = withErrorHandling(async (_req: Request, { params }: Params) 
   });
 
   await getSmartColumnQueue().add("generate", { jobId: job.id });
+  await logActivity({
+    workspaceId: smartColumn.workspaceId,
+    category: "generation",
+    action: "generation.started",
+    summary: `Started generating “${smartColumn.name}” for ${plural(smartColumn.dataset.rowCount, "row")}`,
+    dataset: { id: smartColumn.datasetId, name: smartColumn.dataset.filename },
+    metadata: { jobId: job.id, smartColumnId: id },
+  });
 
   return NextResponse.json({ job }, { status: 202 });
 });

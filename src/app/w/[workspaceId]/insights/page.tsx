@@ -6,17 +6,20 @@ import { BarChart3, GitCompare } from "lucide-react";
 import { useDatasetContext } from "@/components/workspace/dataset-context";
 import { useWorkbench } from "@/hooks/use-datasets";
 import { useTelemetry } from "@/hooks/use-telemetry";
+import { PageHeader } from "@/components/workspace/page-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/components/ui/panel";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InsightBarChart } from "@/components/insights/bar-chart";
+import { SmartColumnInsightCard } from "@/components/insights/smart-column-insight-card";
+import { SmartColumnInsightExpanded } from "@/components/insights/smart-column-insight-expanded";
 import { CrosstabTable } from "@/components/insights/crosstab-table";
-import { computeConfidenceHistogram, computeCrosstab, computeLabelDistribution, computeRatingStats } from "@/lib/insights/compute";
-import { formatPercent } from "@/lib/utils";
+import { computeCrosstab } from "@/lib/insights/compute";
 import type { PredictionDto } from "@/types/workbench";
 
+// Every Smart Column's insights render as a card in one grid, so there's
+// no need to pick a single column from a dropdown to see anything — the
+// whole workbench's distributions are visible at once.
 export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/insights">) {
   const { workspaceId } = use(params);
   const { datasetId } = useDatasetContext();
@@ -24,22 +27,21 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
   const track = useTelemetry(workspaceId);
 
   const smartColumns = workbench?.smartColumns.filter((sc) => sc.activeVersion) ?? [];
-  const [focusId, setFocusId] = React.useState<string | null>(null);
   const [minConfidence, setMinConfidence] = React.useState(0);
   const [compareA, setCompareA] = React.useState<string | null>(null);
   const [compareB, setCompareB] = React.useState<string | null>(null);
+  const [focusedId, setFocusedId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!focusId && smartColumns.length > 0) setFocusId(smartColumns[0].id);
     if (!compareA && smartColumns.length > 0) setCompareA(smartColumns[0].id);
     if (!compareB && smartColumns.length > 1) setCompareB(smartColumns[1].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [smartColumns.length]);
 
   React.useEffect(() => {
-    if (focusId) track("insight_viewed", { smartColumnId: focusId });
+    if (smartColumns.length > 0) track("insight_viewed", { smartColumnId: smartColumns[0].id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId]);
+  }, [datasetId]);
 
   const versionToPredictions = React.useMemo(() => {
     const map = new Map<string, PredictionDto[]>();
@@ -51,19 +53,11 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
     return map;
   }, [workbench]);
 
-  const focus = smartColumns.find((sc) => sc.id === focusId);
-  const focusPredictions = React.useMemo(() => {
-    const all = focus?.activeVersion ? (versionToPredictions.get(focus.activeVersion.id) ?? []) : [];
-    // Insights are about what was predicted, not job health — failed/
-    // not-processed rows have no label or confidence to plot.
+  function predictionsFor(smartColumnId: string) {
+    const sc = smartColumns.find((s) => s.id === smartColumnId);
+    const all = sc?.activeVersion ? (versionToPredictions.get(sc.activeVersion.id) ?? []) : [];
     return all.filter((p) => p.status === "SUCCESS" && (p.confidence ?? 1) >= minConfidence / 100);
-  }, [focus, versionToPredictions, minConfidence]);
-
-  const distribution = React.useMemo(() => computeLabelDistribution(focusPredictions), [focusPredictions]);
-  const ratingStats = React.useMemo(() => computeRatingStats(focusPredictions), [focusPredictions]);
-  const confidenceHistogram = React.useMemo(() => computeConfidenceHistogram(focusPredictions), [focusPredictions]);
-  const avgConfidence = focusPredictions.length > 0 ? focusPredictions.reduce((s, p) => s + (p.confidence ?? 0), 0) / focusPredictions.length : null;
-  const lowConfidenceCount = focusPredictions.filter((p) => (p.confidence ?? 1) < 0.6).length;
+  }
 
   const scA = smartColumns.find((sc) => sc.id === compareA);
   const scB = smartColumns.find((sc) => sc.id === compareB);
@@ -74,166 +68,107 @@ export default function InsightsPage({ params }: PageProps<"/w/[workspaceId]/ins
     return computeCrosstab(predsA, predsB);
   }, [scA, scB, versionToPredictions]);
 
-  if (isLoading) return <div className="p-6"><TableSkeleton /></div>;
-  if (isError) return <div className="p-6"><ErrorState onRetry={() => refetch()} /></div>;
-  if (!datasetId || !workbench) {
-    return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center p-6">
-        <EmptyState icon={BarChart3} title="No dataset selected" description="Pick or upload a dataset from the Data tab first." />
-      </div>
-    );
-  }
-  if (smartColumns.length === 0) {
-    return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center p-6">
-        <EmptyState icon={BarChart3} title="Nothing to show yet" description="Create and generate a Smart Column to see insights here." />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
-      <Tabs defaultValue="distribution">
-        <TabsList>
-          <TabsTrigger value="distribution">Distribution</TabsTrigger>
-          <TabsTrigger value="compare">Compare Columns</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="distribution" className="mt-4 flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Smart Column</span>
-              <Select value={focusId ?? ""} onValueChange={setFocusId}>
-                <SelectTrigger className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {smartColumns.map((sc) => (
-                    <SelectItem key={sc.id} value={sc.id}>
-                      {sc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Confidence ≥ {minConfidence}%</span>
-              <Slider min={0} max={100} step={5} value={[minConfidence]} onValueChange={([v]) => setMinConfidence(v)} />
-            </div>
+  const header = (
+    <PageHeader
+      eyebrow="Insights"
+      title="Insights"
+      description={workbench ? `${smartColumns.length} Smart Column${smartColumns.length === 1 ? "" : "s"} across this dataset.` : "See how your Smart Columns are performing."}
+      actions={
+        workbench && smartColumns.length > 0 ? (
+          <div className="flex w-56 flex-col gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Confidence ≥ {minConfidence}%</span>
+            <Slider min={0} max={100} step={5} value={[minConfidence]} onValueChange={([v]) => setMinConfidence(v)} />
           </div>
-
-          {focusPredictions.length === 0 ? (
-            <EmptyState title="No predictions match this filter" description="Lower the confidence threshold or generate this column." />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Panel>
-                  <PanelHeader>
-                    <PanelTitle>{focus?.type === "RATING" ? "Score distribution" : "Label distribution"}</PanelTitle>
-                  </PanelHeader>
-                  <PanelBody>
-                    {focus?.type === "RATING" ? (
-                      <InsightBarChart data={ratingStats.histogram} xKey="label" yKey="count" />
-                    ) : (
-                      <InsightBarChart data={distribution} xKey="label" yKey="count" />
-                    )}
-                  </PanelBody>
-                </Panel>
-
-                <Panel>
-                  <PanelHeader>
-                    <PanelTitle>Confidence histogram</PanelTitle>
-                  </PanelHeader>
-                  <PanelBody>
-                    <InsightBarChart data={confidenceHistogram} xKey="bucket" yKey="count" color="var(--color-muted-foreground)" />
-                  </PanelBody>
-                </Panel>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Stat label="Total predicted" value={focusPredictions.length.toLocaleString()} />
-                <Stat label="Avg confidence" value={avgConfidence !== null ? formatPercent(avgConfidence) : "—"} />
-                {ratingStats.mean !== null && <Stat label="Expected score" value={ratingStats.mean.toFixed(2)} />}
-                <Stat label="Below 60% confidence" value={lowConfidenceCount.toLocaleString()} tone={lowConfidenceCount > 0 ? "warning" : undefined} />
-              </div>
-
-              {focus?.type !== "RATING" && (
-                <Panel>
-                  <PanelHeader>
-                    <PanelTitle>By label</PanelTitle>
-                  </PanelHeader>
-                  <PanelBody className="flex flex-col gap-2">
-                    {distribution.map((d) => (
-                      <div key={d.label} className="flex items-center gap-3 text-sm">
-                        <span className="w-32 shrink-0 truncate">{d.label}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out" style={{ width: `${d.percent * 100}%` }} />
-                        </div>
-                        <span className="w-14 shrink-0 text-right font-mono text-xs text-muted-foreground">{formatPercent(d.percent)}</span>
-                        <span className="w-20 shrink-0 text-right font-mono text-xs text-muted-foreground">avg {formatPercent(d.avgConfidence)}</span>
-                      </div>
-                    ))}
-                  </PanelBody>
-                </Panel>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="compare" className="mt-4 flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column A</span>
-              <Select value={compareA ?? ""} onValueChange={setCompareA}>
-                <SelectTrigger className="w-52">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {smartColumns.map((sc) => (
-                    <SelectItem key={sc.id} value={sc.id}>
-                      {sc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <GitCompare className="mb-2 h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column B</span>
-              <Select value={compareB ?? ""} onValueChange={setCompareB}>
-                <SelectTrigger className="w-52">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {smartColumns.map((sc) => (
-                    <SelectItem key={sc.id} value={sc.id}>
-                      {sc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {!crosstab || crosstab.total === 0 ? (
-            <EmptyState title="No overlapping predictions" description="Both columns need generated predictions on the same rows to compare." />
-          ) : (
-            <>
-              <p className="text-xs text-muted-foreground">{crosstab.total.toLocaleString()} rows compared.</p>
-              <CrosstabTable result={crosstab} labelA={scA?.name ?? "A"} labelB={scB?.name ?? "B"} />
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+        ) : undefined
+      }
+    />
   );
-}
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-3 shadow-flat transition-shadow hover:shadow-flat-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-1 font-mono text-lg tabular-nums ${tone === "warning" ? "text-warning" : ""}`}>{value}</p>
+    <div className="mx-auto flex h-full max-w-6xl flex-col gap-8 overflow-y-auto px-6 py-10 md:px-8">
+      {header}
+
+      {isLoading && <TableSkeleton />}
+      {isError && <ErrorState onRetry={() => refetch()} />}
+      {!isLoading && !isError && (!datasetId || !workbench) && (
+        <EmptyState icon={BarChart3} title="No dataset selected" description="Pick or upload a dataset from the Data tab first." />
+      )}
+      {!isLoading && !isError && workbench && smartColumns.length === 0 && (
+        <EmptyState icon={BarChart3} title="Nothing to show yet" description="Create and generate a Smart Column to see insights here." />
+      )}
+
+      {!isLoading && !isError && workbench && smartColumns.length > 0 && (
+        <>
+          {smartColumns.length === 1 ? (
+            <SmartColumnInsightExpanded smartColumn={smartColumns[0]} predictions={predictionsFor(smartColumns[0].id)} />
+          ) : focusedId ? (
+            (() => {
+              const focused = smartColumns.find((sc) => sc.id === focusedId);
+              return focused ? (
+                <SmartColumnInsightExpanded smartColumn={focused} predictions={predictionsFor(focused.id)} onBack={() => setFocusedId(null)} />
+              ) : null;
+            })()
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {smartColumns.map((sc) => (
+                <SmartColumnInsightCard key={sc.id} smartColumn={sc} predictions={predictionsFor(sc.id)} onExpand={() => setFocusedId(sc.id)} />
+              ))}
+            </div>
+          )}
+
+          {smartColumns.length > 1 && (
+            <Panel>
+              <PanelHeader>
+                <PanelTitle>Compare columns</PanelTitle>
+              </PanelHeader>
+              <PanelBody className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column A</span>
+                    <Select value={compareA ?? ""} onValueChange={setCompareA}>
+                      <SelectTrigger className="w-52">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {smartColumns.map((sc) => (
+                          <SelectItem key={sc.id} value={sc.id}>
+                            {sc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <GitCompare className="mb-2 h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Column B</span>
+                    <Select value={compareB ?? ""} onValueChange={setCompareB}>
+                      <SelectTrigger className="w-52">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {smartColumns.map((sc) => (
+                          <SelectItem key={sc.id} value={sc.id}>
+                            {sc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {!crosstab || crosstab.total === 0 ? (
+                  <EmptyState title="No overlapping predictions" description="Both columns need generated predictions on the same rows to compare." />
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">{crosstab.total.toLocaleString()} rows compared.</p>
+                    <CrosstabTable result={crosstab} labelA={scA?.name ?? "A"} labelB={scB?.name ?? "B"} />
+                  </>
+                )}
+              </PanelBody>
+            </Panel>
+          )}
+        </>
+      )}
     </div>
   );
 }

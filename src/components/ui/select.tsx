@@ -5,8 +5,13 @@ import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Select = SelectPrimitive.Root;
-export const SelectValue = SelectPrimitive.Value;
 export const SelectGroup = SelectPrimitive.Group;
+
+export function SelectValue({ className, ...props }: SelectPrimitive.SelectValueProps) {
+  // Truncates instead of wrapping — a narrow trigger (e.g. a compact page-size
+  // picker) must never grow taller because its value text wrapped to 2 lines.
+  return <SelectPrimitive.Value className={cn("block min-w-0 truncate", className)} {...props} />;
+}
 
 export function SelectTrigger({ className, children, ...props }: SelectPrimitive.SelectTriggerProps) {
   return (
@@ -17,9 +22,9 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
       )}
       {...props}
     >
-      {children}
+      <span className="min-w-0 flex-1 overflow-hidden text-left">{children}</span>
       <SelectPrimitive.Icon asChild>
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );

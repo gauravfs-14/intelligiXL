@@ -31,17 +31,17 @@ async function main() {
     const found = await prisma.template.findFirst({
       where: { isBuiltIn: true, name: recipe.name },
     });
-    if (!found) {
-      await prisma.template.create({
-        data: {
-          name: recipe.name,
-          description: recipe.description,
-          config: recipe.config as unknown as Prisma.InputJsonValue,
-          isBuiltIn: true,
-          workspaceId: null,
-        },
-      });
-    }
+    const data = {
+      name: recipe.name,
+      description: recipe.description,
+      category: recipe.category,
+      tags: recipe.tags,
+      config: recipe.config as unknown as Prisma.InputJsonValue,
+      isBuiltIn: true,
+      workspaceId: null,
+    };
+    if (found) await prisma.template.update({ where: { id: found.id }, data });
+    else await prisma.template.create({ data });
   }
 
   console.log("Seed complete.");

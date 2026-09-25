@@ -1,5 +1,7 @@
-import { decisionModel, buildSourceState } from "@/lib/decision-models";
-import type { BinaryLabels, CategoricalLabels, DecisionResult, RatingLabels } from "@/lib/decision-models/types";
+import { getDecisionModel, buildSourceState } from "@/lib/decision-models";
+import { DEFAULT_MODEL_IDENTIFIER, DEFAULT_MODEL_PROVIDER, resolveSettings } from "@/lib/decision-models/catalog";
+import type { ModelProviderId, SmartColumnSettings } from "@/lib/decision-models/catalog";
+import type { BinaryLabels, CategoricalLabels, DecisionOptions, DecisionResult, RatingLabels } from "@/lib/decision-models/types";
 import { Prisma, PredictionErrorReason, PredictionStatus, SmartColumnType } from "@/generated/prisma/client";
 
 export interface RunOneParams {
@@ -9,6 +11,11 @@ export interface RunOneParams {
   labels: unknown;
   sourceColumns: string[];
   row: Record<string, unknown>;
+  /** Defaults to DEFAULT_MODEL_PROVIDER / DEFAULT_MODEL_IDENTIFIER. */
+  modelProvider?: ModelProviderId | string | null;
+  modelIdentifier?: string | null;
+  /** Partial is fine — merged over defaults via resolveSettings. */
+  settings?: Partial<SmartColumnSettings> | null;
 }
 
 /** The single place a Smart Column question is actually evaluated against a
@@ -25,13 +32,21 @@ export async function runSmartColumnOnRow(params: RunOneParams): Promise<Decisio
   }
 
   const instructions = params.instructions ?? undefined;
+  const provider = params.modelProvider ?? DEFAULT_MODEL_PROVIDER;
+  const model = getDecisionModel(provider);
+  const settings = resolveSettings(params.settings);
+  const options: DecisionOptions = {
+    model: params.modelIdentifier ?? (provider === DEFAULT_MODEL_PROVIDER ? DEFAULT_MODEL_IDENTIFIER : undefined),
+    timeoutMs: settings.timeoutMs,
+    maxRetries: settings.maxRetries,
+  };
   switch (params.type) {
     case SmartColumnType.BINARY:
-      return decisionModel.binaryDecision(fields, params.question, params.labels as BinaryLabels, instructions);
+      return model.binaryDecision(fields, params.question, params.labels as BinaryLabels, instructions, options);
     case SmartColumnType.CATEGORICAL:
-      return decisionModel.categoricalDecision(fields, params.question, params.labels as CategoricalLabels, instructions);
+      return model.categoricalDecision(fields, params.question, params.labels as CategoricalLabels, instructions, options);
     case SmartColumnType.RATING:
-      return decisionModel.ordinalDecision(fields, params.question, params.labels as RatingLabels, instructions);
+      return model.ordinalDecision(fields, params.question, params.labels as RatingLabels, instructions, options);
     default:
       throw new Error(`Unhandled Smart Column type: ${params.type as string}`);
   }
