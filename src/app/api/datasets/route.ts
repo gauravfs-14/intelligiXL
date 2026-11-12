@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ColumnDataType, DatasetFormat, DatasetStatus, PredictionStatus, ReviewStatus, type Prisma } from "@/generated/prisma/client";
 import { resolveSettings } from "@/lib/decision-models/catalog";
 import { parseDataset } from "@/lib/parsing";
-import { storage } from "@/lib/storage";
+import { storage, storageKeyFor } from "@/lib/storage";
 import { ApiError, withErrorHandling } from "@/lib/api/respond";
 import { logActivity, plural } from "@/lib/activity/log";
 
@@ -75,6 +75,11 @@ const confirmSchema = z.object({
 // every row.
 export const POST = withErrorHandling(async (req: Request) => {
   const body = confirmSchema.parse(await req.json());
+
+  const prefix = storageKeyFor("datasets", body.workspaceId) + "/";
+  if (!body.storageKey.startsWith(prefix) || body.storageKey.includes("..")) {
+    throw new ApiError(422, "Invalid storageKey for this workspace.");
+  }
 
   if (!(await storage.exists(body.storageKey))) {
     throw new ApiError(410, "The staged upload has expired. Please upload the file again.");

@@ -7,6 +7,11 @@ Two options:
 
 Read the security note in [configuration.md](configuration.md#security) first. The app has no login.
 
+All Docker-published ports bind to `127.0.0.1`, including PostgreSQL and Redis.
+Host `pnpm dev` and `pnpm start` also bind to loopback. Keep these defaults for
+local use. Public or shared hosting needs an authenticating proxy and a review
+of network access; the application itself does not enforce user isolation.
+
 ## Docker Compose
 
 ```bash
@@ -65,7 +70,7 @@ Back up the `intelligixl_app_data` volume too, and `APP_SECRET` if you set one. 
 
 ## Host
 
-Requirements: Node 20+, pnpm (`corepack enable`), Docker (for Postgres and Redis).
+Requirements: Node 22.12+ or Node 24+, pnpm (`corepack enable`), Docker (for Postgres and Redis).
 
 ```bash
 make setup                  # install deps, create .env, start postgres+redis, migrate, seed

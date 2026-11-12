@@ -41,8 +41,8 @@ export const JEV_MODELS: Omit<ModelOption, "available" | "unavailableReason">[] 
     provider: "typesafe",
     name: "Jev",
     variant: "latest",
-    description: "TypeSafe's flagship System One model. Calibrated probabilities, fast, and cheap per row.",
-    tags: ["Calibrated", "Fast"],
+    description: "TypeSafe's flagship System One model. Returns a label and probabilities for each row.",
+    tags: ["Hosted", "Fast"],
     recommended: true,
   },
   {

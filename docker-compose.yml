@@ -18,7 +18,7 @@ services:
       POSTGRES_PASSWORD: intelligixl
       POSTGRES_DB: intelligixl
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - intelligixl_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -31,7 +31,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - intelligixl_redis_data:/data
     healthcheck:
@@ -69,7 +69,7 @@ services:
       LAYA_BASE_URL: ${DOCKER_LAYA_BASE_URL:-}
       LAYA_API_KEY: ${LAYA_API_KEY:-}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     volumes:
       - intelligixl_app_data:/app/.data
     extra_hosts:
@@ -128,7 +128,7 @@ services:
       LAYA_API_KEY: ${LAYA_API_KEY:-}
       HF_HOME: /models
     ports:
-      - "${LAYA_PORT:-8000}:8000"
+      - "127.0.0.1:${LAYA_PORT:-8000}:8000"
     volumes:
       - intelligixl_laya_models:/models
 

@@ -53,6 +53,7 @@ ENV NODE_ENV=production \
 # Everything the web server and the tsx-run worker need (dev deps included:
 # the worker runs TypeScript source through tsx).
 COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=build /app/LICENSE /app/NOTICE ./
 COPY --from=build /app/tsconfig.json /app/next.config.ts /app/prisma.config.ts ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma

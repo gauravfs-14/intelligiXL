@@ -43,6 +43,12 @@ Option and level descriptions are sent as criteria. They are optional, but they 
 - Laya reports its own confidence differently (1 − normalized entropy). IntelligiXL ignores Laya's value and recomputes confidence from its probabilities using the formula above, so a threshold means the same thing on both providers.
 - Each Smart Column has a **review threshold**, 80% by default. Predictions below it are flagged in the grid, counted on the dashboard, and shown first in the Review queue. You can set the review mode to "Just record it" to turn flagging off.
 
+Concentration is not the probability that an answer is correct. IntelligiXL has
+not established calibration for your dataset, prompt, or provider. Confident
+errors can escape threshold-based review. Measure accuracy and calibration on
+representative labeled data before choosing a cutoff. Matching the confidence
+formula across providers does not establish equal empirical error rates.
+
 ## Run settings
 
 These are set per Smart Column in the builder's **Model & tuning** step, and stored on the version (`SmartColumnVersion.settings`).

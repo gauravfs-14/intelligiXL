@@ -29,11 +29,9 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # --- prerequisite checks -----------------------------------------------------
 
 check_node() {
-  have node || die "Node.js is not installed. Install Node 20+ (22 LTS recommended): https://nodejs.org or 'brew install node@22' / nvm / fnm."
-  local major
-  major="$(node -p 'process.versions.node.split(".")[0]')"
-  if [ "$major" -lt 20 ]; then
-    die "Node $(node -v) is too old; this project needs Node >= 20 (22 LTS recommended)."
+  have node || die "Node.js is not installed. Install Node 22.12+ (22 LTS recommended): https://nodejs.org or 'brew install node@22' / nvm / fnm."
+  if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit((major === 22 && minor >= 12) || major >= 24 ? 0 : 1)'; then
+    die "Node $(node -v) is too old; this project needs Node 22.12+ or Node 24+."
   fi
   ok "node $(node -v)"
 }

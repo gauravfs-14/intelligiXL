@@ -16,6 +16,7 @@ const EXTENSION_FORMAT: Record<string, DatasetFormat> = {
 };
 
 const SAMPLE_SIZE = 20;
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 // FR-003 — validate, detect headers/types, and return a sample for the user
 // to confirm import. The raw file is written to storage immediately so the
@@ -39,6 +40,7 @@ export const POST = withErrorHandling(async (req: Request) => {
   let staged = false;
 
   if (file instanceof File) {
+    if (file.size > MAX_UPLOAD_BYTES) throw new ApiError(413, "Uploads are limited to 20 MiB.");
     filename = file.name;
     buffer = Buffer.from(await file.arrayBuffer());
     storageKey = "";
@@ -65,6 +67,7 @@ export const POST = withErrorHandling(async (req: Request) => {
     throw new ApiError(422, `Unsupported file type ".${ext}". Supported formats: CSV, XLSX, JSON, JSONL.`);
   }
   if (buffer.byteLength === 0) throw new ApiError(422, "The file is empty.");
+  if (buffer.byteLength > MAX_UPLOAD_BYTES) throw new ApiError(413, "Uploads are limited to 20 MiB.");
 
   const parsed = parseDataset(buffer, format, { sheet });
 

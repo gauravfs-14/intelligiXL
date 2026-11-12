@@ -7,7 +7,6 @@ import { JobLogger } from "./job-log";
 import { logActivity, plural } from "@/lib/activity/log";
 import { decisionResultToPredictionData, runSmartColumnOnRow } from "./run";
 
-const CANCEL_CHECK_EVERY = 20;
 const CHECKPOINT_EVERY = 25;
 
 /** Executes a queued Smart Column generation or retry job row-by-row with
@@ -21,6 +20,9 @@ export async function runGenerationJob(jobId: string): Promise<void> {
   });
 
   const log = new JobLogger();
+
+  // A queued BullMQ entry may still be delivered after the user cancels it.
+  if (job.status === JobStatus.CANCELLED || job.status === JobStatus.COMPLETED || job.status === JobStatus.FAILED) return;
 
   if (!job.datasetId || !job.smartColumnVersion) {
     log.add("error", "Job is missing its dataset or Smart Column version.");
@@ -43,7 +45,11 @@ export async function runGenerationJob(jobId: string): Promise<void> {
     "info",
     `Model: ${version.modelIdentifier} (${version.modelProvider}) · threshold ${Math.round(settings.confidenceThreshold * 100)}%${settings.lowConfidenceAction === "none" ? " (flagging off)" : ""} · concurrency ${settings.concurrency} · timeout ${Math.round(settings.timeoutMs / 1000)}s · ${settings.maxRetries} retr${settings.maxRetries === 1 ? "y" : "ies"}`,
   );
-  await prisma.job.update({ where: { id: jobId }, data: { status: JobStatus.RUNNING, logs: log.toJson() } });
+  const claimed = await prisma.job.updateMany({
+    where: { id: jobId, status: { in: [JobStatus.QUEUED, JobStatus.RUNNING] } },
+    data: { status: JobStatus.RUNNING, logs: log.toJson() },
+  });
+  if (claimed.count === 0) return;
 
   const rows =
     job.jobType === JobType.SMART_COLUMN_RETRY
@@ -61,7 +67,6 @@ export async function runGenerationJob(jobId: string): Promise<void> {
   let completed = 0;
   let failed = 0;
   let cancelled = false;
-  let sinceCancelCheck = 0;
   let sinceFlush = 0;
   let sinceCheckpoint = 0;
   const startedAt = Date.now();
@@ -87,6 +92,11 @@ export async function runGenerationJob(jobId: string): Promise<void> {
 
   async function processRow(row: (typeof rows)[number]) {
     if (cancelled) return;
+    const current = await prisma.job.findUnique({ where: { id: jobId }, select: { status: true } });
+    if (current?.status === JobStatus.CANCELLED) {
+      cancelled = true;
+      return;
+    }
 
     if (job.jobType === JobType.SMART_COLUMN_GENERATION) {
       const existing = await prisma.prediction.findUnique({
@@ -135,13 +145,6 @@ export async function runGenerationJob(jobId: string): Promise<void> {
 
     maybeCheckpoint();
     await flushProgress();
-
-    sinceCancelCheck += 1;
-    if (sinceCancelCheck >= CANCEL_CHECK_EVERY) {
-      sinceCancelCheck = 0;
-      const fresh = await prisma.job.findUnique({ where: { id: jobId }, select: { status: true } });
-      if (fresh?.status === JobStatus.CANCELLED) cancelled = true;
-    }
   }
 
   await asyncPool(settings.concurrency, rows, processRow);
@@ -160,8 +163,9 @@ export async function runGenerationJob(jobId: string): Promise<void> {
       : `Run complete — ${completed.toLocaleString()} ok, ${failed.toLocaleString()} flagged/failed`,
   );
 
-  await prisma.job.update({
-    where: { id: jobId },
+  // Never overwrite a cancellation that races with the final status check.
+  const finalized = await prisma.job.updateMany({
+    where: { id: jobId, status: JobStatus.RUNNING },
     data: {
       status: cancelled ? JobStatus.CANCELLED : JobStatus.COMPLETED,
       completedItems: completed,
@@ -170,6 +174,14 @@ export async function runGenerationJob(jobId: string): Promise<void> {
       logs: log.toJson(),
     },
   });
+
+  if (finalized.count === 0) {
+    cancelled = true;
+    await prisma.job.updateMany({
+      where: { id: jobId, status: JobStatus.CANCELLED },
+      data: { completedItems: completed, failedItems: failed, logs: log.toJson() },
+    });
+  }
 
   // A user-initiated cancel is already logged by the cancel route.
   if (!cancelled) {

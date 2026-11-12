@@ -1,5 +1,11 @@
 # IntelligiXL
 
+[![CI](https://github.com/gauravfs-14/intelligiXL/actions/workflows/ci.yml/badge.svg)](https://github.com/gauravfs-14/intelligiXL/actions/workflows/ci.yml)
+
+Local AI annotation workbench by [Gaurab Chhetri](https://gaurabchhetri.com.np).
+Source-available under [PolyForm Noncommercial 1.0.0](LICENSE), with required
+[attribution](NOTICE). Commercial use requires separate permission.
+
 A spreadsheet workbench that answers questions about each row using AI models. Import a dataset, define a **Smart Column** (a question plus the possible answers), and a System One model labels every row with a probability for each answer and a confidence score. Low-confidence rows go to a human review queue.
 
 Supported models: [Jev](https://docs.typesafe.ai) (hosted by TypeSafe) and [Laya](https://github.com/NandhaKishorM/laya) (open weights, self-hosted).
@@ -18,7 +24,7 @@ Supported models: [Jev](https://docs.typesafe.ai) (hosted by TypeSafe) and [Laya
 
 ## Quick start
 
-Requirements: Node 20+, pnpm (`corepack enable`), Docker.
+Requirements: Node 22.12+ or Node 24+, pnpm (`corepack enable`), Docker.
 
 ```bash
 make setup      # install deps, create .env, start Postgres + Redis, migrate, seed
@@ -74,12 +80,22 @@ Details: [docs/configuration.md](docs/configuration.md).
 
 There is **no authentication**. Anyone who can reach the app can read your data, spend your API credits and change the settings. Run it locally, or put an authenticating proxy in front of it before exposing it.
 
+Host start commands and Docker-published ports bind to `127.0.0.1` by default.
+Uploads are limited to 20 MiB. Jev sends selected row fields to TypeSafe's hosted
+service; Laya sends them to the server you configure. Use only datasets you are
+permitted to share with that provider.
+
+Confidence measures the concentration of a model's output distribution. It is
+not a validated probability that a label is correct. A confident wrong label
+can bypass a review threshold; evaluate on representative labeled examples.
+
 ## Documentation
 
 - [docs/configuration.md](docs/configuration.md): environment variables, the Settings page, secret encryption
 - [docs/models.md](docs/models.md): Jev and Laya, model IDs, confidence, review thresholds, run settings
 - [docs/deployment.md](docs/deployment.md): Docker Compose, running on a host, volumes, backups, updating
 - [docs/architecture.md](docs/architecture.md): processes, request flow, data model, code layout
+- [docs/testing.md](docs/testing.md): unit checks and the API/worker integration workflow
 
 ## Stack
 
@@ -90,3 +106,15 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Prisma 7 + Postgr
 - Single user and no auth. A seeded local user owns everything.
 - Files are stored on local disk. S3 needs an implementation of `StorageAdapter` (`src/lib/storage`).
 - The grid loads a whole dataset into the browser. It's intended for up to about 10k rows.
+
+## License and attribution
+
+Copyright (c) 2026 Gaurab Chhetri. Noncommercial use, modification, and
+redistribution are permitted under [PolyForm Noncommercial 1.0.0](LICENSE).
+Redistributed copies must retain the `Required Notice:` attribution lines in
+[NOTICE](NOTICE) and the license terms or their URL. For commercial or business
+use outside the license's permitted purposes, contact
+[contact@gaurabchhetri.com.np](mailto:contact@gaurabchhetri.com.np).
+
+This is a source-available noncommercial license, not an OSI-approved open-source
+license. Third-party components, datasets, and models retain their own licenses.
