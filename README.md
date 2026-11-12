@@ -10,6 +10,36 @@ A spreadsheet workbench that answers questions about each row using AI models. I
 
 Supported models: [Jev](https://docs.typesafe.ai) (hosted by TypeSafe) and [Laya](https://github.com/NandhaKishorM/laya) (open weights, self-hosted).
 
+**On this page:** [Screenshots](#screenshots) · [Features](#features) · [Quick start](#quick-start) · [Configuration](#configuration) · [Verification](docs/testing.md) · [License](#license-and-attribution)
+
+## Screenshots
+
+> [!NOTE]
+> These screenshots show the running application with synthetic road-safety
+> records and illustrative predictions. They do not report model performance
+> or contain private research data.
+
+### Data workbench
+
+Explore source records alongside Smart Column labels, confidence scores, and
+review flags. Search, filter, and export from the same view.
+
+![Data workbench showing source records, incident labels, confidence scores, and review flags](docs/screenshots/data-workbench.png)
+
+### Human review
+
+Inspect the source text and the model's label distribution, then confirm,
+correct, or skip a prediction. Human decisions remain separate from model outputs.
+
+![Human review queue showing a low-confidence prediction and confirm, correct, and skip controls](docs/screenshots/review-queue.png)
+
+### Label insights
+
+View label distributions for each Smart Column and compare columns with a
+cross-tabulation. Filter the view by confidence.
+
+![Insights showing label distribution charts and a comparison between incident type and injury reports](docs/screenshots/insights.png)
+
 ## Features
 
 - Import CSV, XLSX, JSON and JSONL, with type inference and a preview before you confirm.
